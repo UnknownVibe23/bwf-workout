@@ -128,6 +128,7 @@ async function runView(root, active) {
     h('div', { class: 'workout-top' },
       h('div', { class: 'workout-title-row' },
         h('span', { class: 'workout-title' }, 'Workout in progress'),
+        els.elapsed = h('span', { class: 'elapsed' }, ''),
         h('span', { class: 'wake-indicator', title: wakeLockSupported ? 'Screen wake lock active' : 'Wake Lock API unsupported — silent-audio fallback active' },
           settings.wakeLock ? '🔒 screen on' : '🔓 screen lock off'),
         h('button', { class: 'icon-btn', title: 'Pause workout', onclick: () => pauseWorkout() }, '⏸'),
@@ -149,6 +150,7 @@ async function runView(root, active) {
 
   async function renderPanel() {
     els.panel.innerHTML = '';
+    document.body.classList.toggle('resting', active.phase === 'rest' && !!active.rest);
     updateChrome();
     if (active.phase === 'rest' && active.rest) return renderRestPanel();
     const step = active.queue[active.index];
@@ -461,6 +463,7 @@ async function runView(root, active) {
   }
 
   function tick() {
+    if (els.elapsed) els.elapsed.textContent = `⏱ ${fmtTime((Date.now() - active.startedAt) / 1000)}`;
     if (active.paused) return;
     if (active.phase === 'rest' && active.rest && els.countdown) {
       els.countdown.textContent = fmtTime(remainingMs(active.rest) / 1000);

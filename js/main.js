@@ -29,6 +29,7 @@ async function render() {
   if (cleanup) { try { cleanup(); } catch { /* ignore */ } cleanup = null; }
   app.innerHTML = '';
   document.body.classList.toggle('in-workout', hash === '#/workout');
+  if (hash !== '#/workout') document.body.classList.remove('resting');
   if (!route) { location.hash = '#/'; return; }
   document.querySelectorAll('.nav-item').forEach((a) => {
     const r = a.dataset.route;

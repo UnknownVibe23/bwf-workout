@@ -39,9 +39,13 @@ html, body {
   min-height: 100%;
 }
 
-body { padding-bottom: calc(72px + var(--safe-bottom)); }
+body { padding-bottom: calc(72px + var(--safe-bottom)); transition: background-color 0.35s ease; }
 body.in-workout { padding-bottom: var(--safe-bottom); }
 body.in-workout .bottom-nav { display: none; }
+
+/* Rest mode: muted green background so the mode is visible at a glance */
+body.resting { --bg: #12291d; background: var(--bg); }
+html[data-theme="light"] body.resting { --bg: #dff0e4; }
 
 .app {
   max-width: 640px;
@@ -190,7 +194,8 @@ body.in-workout .bottom-nav { display: none; }
 
 .next-preview { text-align: center; color: var(--text-muted); margin: 14px 0 4px; font-size: 1rem; }
 
-.rest-label { text-align: center; color: var(--accent); font-weight: 800; letter-spacing: 0.2em; font-size: 0.9rem; margin-top: 8px; }
+.rest-label { text-align: center; color: var(--accent); font-weight: 900; letter-spacing: 0.3em; font-size: 2rem; margin-top: 8px; text-transform: uppercase; }
+.elapsed { font-size: 0.85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .countdown {
   text-align: center;
   font-size: 5.5rem;
