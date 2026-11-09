@@ -108,6 +108,29 @@ registers, then install (below).
 - **Settings** → export/import your full history as JSON, reset data, change
   rest times, sound/vibration, theme, wake lock, and edit progression lists.
 
+## Security & privacy
+
+Threat model: single-user, local-only app. There is no backend, no account,
+no analytics, and no network traffic at runtime — the only outbound links are
+the fixed `reddit.com` wiki links on the Guide tab, which open in the browser
+(`target="_blank"`).
+
+- All data (workouts, settings, progressions, in-progress session) stays in
+  IndexedDB, which is bound to the app's origin (`https://<host>/bwf-workout/`).
+  It is never sent anywhere; backups are JSON files you export/import yourself.
+- No secrets, tokens, or credentials exist in the code or repo.
+- No `eval`, no inline scripts/styles, and no `innerHTML` with dynamic data
+  (all rendering uses DOM text nodes). A strict Content-Security-Policy meta
+  tag is set in `index.html` (`default-src 'self'`, plus `data:` only for
+  images/media so the wake-lock fallback audio works).
+- The service worker only handles same-origin GET requests and precaches the
+  app shell; scope is `./`.
+- Import validates backup files (structure + known exercise ids) before
+  writing to the database. Only import backups you trust.
+- Browser permissions used: Screen Wake Lock, Vibration, Web Audio (all
+  benign, no camera/mic/location). The app must be served over HTTPS
+  (GitHub Pages provides this) for the service worker and install to work.
+
 ## Extending
 
 - Add/reorder exercises or change rep ranges: edit `js/data.js`.

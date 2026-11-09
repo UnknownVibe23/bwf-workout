@@ -279,9 +279,20 @@ async function runView(root, active) {
     renderPanel();
   }
 
+  let completing = false;
   async function completeSet() {
+    if (completing) return;
     const step = active.queue[active.index];
     if (!step || step.type !== 'set') return;
+    completing = true;
+    try {
+      await doCompleteSet(step);
+    } finally {
+      completing = false;
+    }
+  }
+
+  async function doCompleteSet(step) {
     let reps = parseInt(els.repsInput.value, 10);
     if (isNaN(reps)) reps = 0;
     const entry = active.entries[step.exerciseId];
@@ -402,7 +413,10 @@ async function runView(root, active) {
     return false;
   }
 
+  let finishing = false;
   async function finishWorkout() {
+    if (finishing) return;
+    finishing = true;
     const now = Date.now();
     const rec = {
       date: active.startedAt,
