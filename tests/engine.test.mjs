@@ -132,14 +132,39 @@ assert.ok(isHoldProgression('Arch body hold'));
 assert.ok(!isHoldProgression('Pull-ups'));
 assert.ok(!isHoldProgression('Ring ab rollouts'));
 assert.deepEqual(targetFor(EXERCISES.pullups, 'Arch hangs'), { range: [10, 30], unit: 'seconds' });
-assert.deepEqual(targetFor(EXERCISES.dips, 'Parallel bar support hold'), { range: [10, 30], unit: 'seconds' });
+assert.deepEqual(targetFor(EXERCISES.dips, 'Parallel bar support hold'), { range: [10, 60], unit: 'seconds' }, 'support hold targets 3x60s per the dips page');
 assert.deepEqual(targetFor(EXERCISES.antiExtension, 'Plank'), { range: [10, 30], unit: 'seconds' });
 assert.deepEqual(targetFor(EXERCISES.pullups, 'Pull-ups'), { range: [5, 8], unit: 'reps' });
 assert.deepEqual(targetFor(EXERCISES.antiExtension, 'Ring ab rollouts'), { range: [8, 12], unit: 'reps' });
 assert.ok(isReadyToProgress([30, 30, 30], [10, 30]), '3x30s hold ready');
 assert.ok(!isReadyToProgress([30, 30, 29], [10, 30]), 'not ready below 30s');
+assert.ok(isReadyToProgress([60, 60, 60], [10, 60]), '3x60s support hold ready');
+assert.ok(!isReadyToProgress([60, 60, 45], [10, 60]), 'support hold not ready below 60s');
 assert.equal(suggestedReps([20, 20, 20], [10, 30]), 21);
 assert.equal(suggestedReps(null, [10, 30]), 10);
+// exact set of hold-type levels across all default + alternate paths:
+// arch hangs, support hold, plank, copenhagen planks (alt path), arch body hold (alt path)
+const foundHolds = [];
+for (const id of Object.keys(EXERCISES)) {
+  const lists = [EXERCISES[id].defaultProgressions, ...(EXERCISES[id].altPaths || [])];
+  for (const list of lists) {
+    for (const name of list) {
+      if (isHoldProgression(name)) foundHolds.push(name);
+      assert.equal(targetFor(EXERCISES[id], name).unit, isHoldProgression(name) ? 'seconds' : 'reps', `${id}: ${name} unit`);
+    }
+  }
+}
+assert.deepEqual(foundHolds.sort(), [
+  'Arch body hold',
+  'Arch hangs',
+  'Assisted Copenhagen plank',
+  'Assisted knee Copenhagen plank',
+  'Copenhagen plank',
+  'Copenhagen plank with movement',
+  'Knee Copenhagen plank',
+  'Parallel bar support hold',
+  'Plank',
+].sort(), 'hold set matches the guide');
 
 // --- Alternate paths exist only for the core triplet ---
 for (const id of ['pullups', 'squats', 'dips', 'hinge', 'rows', 'pushups']) {

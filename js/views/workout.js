@@ -210,7 +210,7 @@ async function runView(root, active) {
       h('h2', { class: 'exercise-name' }, ex.name),
       h('div', { class: 'progression-line' },
         h('span', { class: 'badge' }, entry.progression),
-        ready ? h('span', { class: 'badge badge-accent', title: isHold ? 'You held 30s for all 3 sets — consider the next progression at your next workout' : 'You hit the top of the rep range for all 3 sets — consider the next progression at your next workout' }, 'ready to progress ↑') : null,
+        ready ? h('span', { class: 'badge badge-accent', title: isHold ? `You held ${target.range[1]}s for all 3 sets — consider the next progression at your next workout` : 'You hit the top of the rep range for all 3 sets — consider the next progression at your next workout' }, 'ready to progress ↑') : null,
       ),
       h('div', { class: 'set-indicator' }, `Set ${step.setNumber} of ${SETS_PER_EXERCISE}`),
       h('div', { class: 'target-line' },

@@ -98,7 +98,7 @@ export async function progressView(root) {
         : h('p', { class: 'muted' }, 'No sets logged yet at this progression.'),
       values.length ? barChart(values, labels, unit) : null,
       ready ? h('p', { class: 'badge badge-accent badge-block' }, target.unit === 'seconds'
-        ? 'You held 30s for all 3 sets — you may move to the next progression when ready.'
+        ? `You held ${target.range[1]}s for all 3 sets — you may move to the next progression when ready.`
         : 'You reached 3 sets at the top of the rep range — you may move to the next progression when ready.') : null,
     ));
   }

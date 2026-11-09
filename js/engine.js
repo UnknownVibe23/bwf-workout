@@ -112,7 +112,12 @@ export function isHoldProgression(progressionName) {
 }
 
 export function targetFor(exercise, progressionName) {
-  if (isHoldProgression(progressionName)) return { range: [10, 30], unit: 'seconds' };
+  if (isHoldProgression(progressionName)) {
+    // Main RR page: holds progress at 3x30s. The dipping page specifies
+    // 3x1min holds for the parallel bar support hold specifically.
+    const high = /support hold/i.test(String(progressionName)) ? 60 : 30;
+    return { range: [10, high], unit: 'seconds' };
+  }
   return { range: exercise.repRange, unit: 'reps' };
 }
 
