@@ -1,10 +1,10 @@
-import { h, fmtDate, daysSince } from '../util.js';
+import { h, fmtDate } from '../util.js';
 import {
   getAllWorkouts, workoutCount, getActive, getAllProgressions,
   progressionName, lastEntryFor, settings,
 } from '../store.js';
 import { EXERCISES, EXERCISE_ORDER, PAIRS, CORE } from '../data.js';
-import { isReadyToProgress, targetFor } from '../engine.js';
+import { isReadyToProgress, targetFor, nextWorkoutDay } from '../engine.js';
 
 export async function homeView(root) {
   const [workouts, count, active, progs] = await Promise.all([
@@ -16,10 +16,15 @@ export async function homeView(root) {
   if (!last) {
     nextSuggestion = 'Start your first workout — aim for 3 sessions per week with at least one rest day between.';
   } else {
-    const d = daysSince(last.date);
-    nextSuggestion = d >= 1
-      ? 'Today is a good training day (3 workouts per week, at least one rest day between sessions).'
-      : 'Rest day today — your next session can be tomorrow. The routine is designed for 3 workouts per week.';
+    const { restToday, trainedToday, nextDay } = nextWorkoutDay(last.date);
+    const nextTxt = new Date(nextDay).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    if (!restToday) {
+      nextSuggestion = 'Today is a good training day (3 workouts per week, at least one rest day between sessions).';
+    } else if (trainedToday) {
+      nextSuggestion = `You trained today — rest day tomorrow. Next workout: ${nextTxt}. (3 workouts per week, at least one rest day between.)`;
+    } else {
+      nextSuggestion = `Rest day today — next workout: ${nextTxt}. (3 workouts per week, at least one rest day between.)`;
+    }
   }
 
   const startBtn = h('a', {

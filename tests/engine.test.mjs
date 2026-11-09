@@ -3,7 +3,7 @@ import {
   buildQueue, stepAfterSet, stepAfterRest, skipExerciseIndex,
   startRest, remainingMs, isRestDone, pauseRest, resumeRest, addRestTime, resetRest,
   isReadyToProgress, suggestedReps, completedSetCount, TOTAL_SETS,
-  isHoldProgression, targetFor,
+  isHoldProgression, targetFor, nextWorkoutDay,
 } from '../js/engine.js';
 import { EXERCISES, PAIRS, CORE } from '../js/data.js';
 
@@ -149,5 +149,16 @@ assert.equal(EXERCISES.antiExtension.altPaths.length, 3);
 assert.equal(EXERCISES.antiRotation.altPaths.length, 2);
 assert.equal(EXERCISES.extension.altPaths.length, 2);
 assert.deepEqual(EXERCISES.antiExtension.altPaths[0], ['Kneeling ab wheel rollouts', 'Standing ab wheel rollouts']);
+
+// --- Rest-day schedule: 3x/week, at least one full rest day between ---
+const day = 86400000;
+const mondayNoon = new Date(2026, 10, 9, 12, 0, 0).getTime(); // a Monday
+let r2 = nextWorkoutDay(mondayNoon, mondayNoon + 3 * 3600000); // trained Monday, still Monday evening
+assert.ok(r2.restToday && r2.trainedToday, 'same day as workout: rest, trained today');
+assert.equal(r2.nextDay, mondayNoon - (mondayNoon % day) + 2 * day, 'next allowed day is Wednesday');
+r2 = nextWorkoutDay(mondayNoon, mondayNoon + 1 * day + 3600000); // Tuesday
+assert.ok(r2.restToday && !r2.trainedToday, 'day after workout: still rest day');
+r2 = nextWorkoutDay(mondayNoon, mondayNoon + 2 * day + 3600000); // Wednesday
+assert.ok(!r2.restToday && !r2.trainedToday, 'two days later: training day again');
 
 console.log('All engine tests passed.');

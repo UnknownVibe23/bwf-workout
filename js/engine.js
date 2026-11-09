@@ -116,6 +116,20 @@ export function targetFor(exercise, progressionName) {
   return { range: exercise.repRange, unit: 'reps' };
 }
 
+function startOfDayTs(ts) {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+// The routine is 3x/week with at least one full rest day between sessions:
+// if the last workout was on day X, the next allowed workout day is X+2.
+export function nextWorkoutDay(lastTs, now = Date.now()) {
+  const lastDay = startOfDayTs(lastTs);
+  const today = startOfDayTs(now);
+  const nextDay = lastDay + 2 * 86400000;
+  return { restToday: today < nextDay, trainedToday: today === lastDay, nextDay };
+}
+
 export function completedSetCount(entries) {
   let n = 0;
   for (const id of Object.keys(entries || {})) {

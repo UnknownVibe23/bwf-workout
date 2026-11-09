@@ -42,10 +42,6 @@ export function fmtDuration(sec) {
   return `${m}m ${String(s).padStart(2, '0')}s`;
 }
 
-export function daysSince(ts, now = Date.now()) {
-  return Math.floor((now - ts) / 86400000);
-}
-
 export function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
 }
