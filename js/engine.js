@@ -108,7 +108,8 @@ export function suggestedReps(lastSets, repRange) {
 // Static holds (arch hangs, support holds, planks) are timed in seconds:
 // the guide says hold 10-30s per set and progress at 30s for all 3 sets.
 export function isHoldProgression(progressionName) {
-  return /hold|hang|plank/i.test(String(progressionName));
+  // "arch hangs" is a timed hold, but "hanging leg raises" are reps — match precisely.
+  return /hold|plank|arch hang/i.test(String(progressionName));
 }
 
 export function targetFor(exercise, progressionName) {

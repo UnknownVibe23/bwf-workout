@@ -131,6 +131,8 @@ assert.ok(isHoldProgression('Plank'));
 assert.ok(isHoldProgression('Arch body hold'));
 assert.ok(!isHoldProgression('Pull-ups'));
 assert.ok(!isHoldProgression('Ring ab rollouts'));
+assert.ok(!isHoldProgression('Tucked hanging leg raises'), 'hanging leg raises are reps, not holds');
+assert.ok(!isHoldProgression('Straight hanging leg raises'));
 assert.deepEqual(targetFor(EXERCISES.pullups, 'Arch hangs'), { range: [10, 30], unit: 'seconds' });
 assert.deepEqual(targetFor(EXERCISES.dips, 'Parallel bar support hold'), { range: [10, 60], unit: 'seconds' }, 'support hold targets 3x60s per the dips page');
 assert.deepEqual(targetFor(EXERCISES.antiExtension, 'Plank'), { range: [10, 30], unit: 'seconds' });
