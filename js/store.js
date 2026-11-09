@@ -80,16 +80,6 @@ export async function setProgressionPath(exerciseId, path) {
   });
 }
 
-export async function setProgressionList(exerciseId, list) {
-  const prev = await dbGet('progressions', exerciseId);
-  const clean = list.map((s) => String(s).trim()).filter(Boolean);
-  await dbPut('progressions', {
-    exerciseId,
-    level: clamp(prev ? prev.level || 0 : 0, 0, Math.max(0, clean.length - 1)),
-    customList: clean.length ? clean : undefined,
-  });
-}
-
 // Most recent workout entry for an exercise at the given progression level and path.
 export async function lastEntryFor(exerciseId, level, path = 0) {
   const workouts = await getAllWorkouts();

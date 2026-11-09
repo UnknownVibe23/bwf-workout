@@ -1,8 +1,6 @@
 import { h, confirmModal, downloadJson } from '../util.js';
-import { EXERCISES, EXERCISE_ORDER } from '../data.js';
 import {
-  settings, setSetting, getAllProgressions, setProgressionList,
-  exportData, importData, resetWorkoutData,
+  settings, setSetting, exportData, importData, resetWorkoutData,
 } from '../store.js';
 
 function numberField(label, key, min, max) {
@@ -31,8 +29,6 @@ function toggleField(label, key) {
 }
 
 export async function settingsView(root) {
-  const progs = await getAllProgressions();
-
   const themeSel = h('select', { class: 'select' },
     h('option', { value: 'dark', selected: settings.theme === 'dark' ? true : null }, 'Dark'),
     h('option', { value: 'light', selected: settings.theme === 'light' ? true : null }, 'Light'),
@@ -89,21 +85,6 @@ export async function settingsView(root) {
     }),
   }, '🗑 Reset workout data');
 
-  const progEditors = EXERCISE_ORDER.map((id) => {
-    const rec = progs[id];
-    const input = h('input', { class: 'input input-list', type: 'text', value: rec.list.join(', ') });
-    const save = h('button', {
-      class: 'btn btn-secondary',
-      onclick: async () => {
-        await setProgressionList(id, input.value.split(','));
-        input.value = (await getAllProgressions())[id].list.join(', ');
-      },
-    }, 'Save');
-    return h('div', { class: 'prog-editor' },
-      h('div', { class: 'setting-label' }, EXERCISES[id].name),
-      h('div', { class: 'prog-editor-row' }, input, save));
-  });
-
   root.append(
     h('section', { class: 'section' }, h('h1', { class: 'screen-title' }, 'Settings')),
     h('section', { class: 'section' },
@@ -130,10 +111,6 @@ export async function settingsView(root) {
           h('span', { class: 'setting-label' }, 'Import backup (JSON)'), importInput),
         resetBtn,
       ),
-    ),
-    h('section', { class: 'section' },
-      h('h2', { class: 'section-title' }, 'Progression lists (comma separated, easiest → hardest)'),
-      h('div', { class: 'card stack' }, progEditors),
     ),
   );
 }

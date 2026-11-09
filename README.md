@@ -106,7 +106,7 @@ registers, then install (below).
   tempo, failure-1 rep strategy, 3×/week schedule) with links to the official
   wiki pages.
 - **Settings** → export/import your full history as JSON, reset data, change
-  rest times, sound, theme, wake lock, and edit progression lists.
+  rest times, sound, theme, wake lock.
 
 ## Security & privacy
 
