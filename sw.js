@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bwf-workout-v2';
+const CACHE_NAME = 'bwf-workout-v3';
 const APP_SHELL = [
   './',
   './index.html',
