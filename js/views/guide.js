@@ -43,7 +43,7 @@ export async function guideView(root) {
     h('section', { class: 'section card guide-section' },
       h('h2', { class: 'section-title' }, 'Progressions'),
       h('p', {}, 'For each exercise, do the hardest progression level you can complete for 3 sets of 5–8 reps (8–12 for core). Try to beat your previous numbers every workout. When you hit 3 sets of 8 (or 12 for core) with good form, move to the next level and start the next workout with 3 sets of 5 again.'),
-      h('p', {}, 'Static holds (arch hangs, parallel bar support hold, plank, Copenhagen planks, arch body hold) are timed, not counted in reps: one set is holding the position. Move on once you can hold 30 seconds for all 3 sets — the parallel bar support hold targets 3×60 seconds per its exercise page.'),
+      h('p', {}, 'Static holds (arch hangs, parallel bar support hold, plank, Copenhagen planks, arch body hold) are timed, not counted in reps: one set is holding the position. The app shows a start/stop hold timer on these exercises — stop it and the measured seconds fill in automatically. Move on once you can hold 30 seconds for all 3 sets — the parallel bar support hold targets 3×60 seconds per its exercise page.'),
       h('p', {}, 'The core exercises have alternate progression paths in the official guide — you can pick a path per exercise in the app (workout setup or Progress screen).'),
     ),
 

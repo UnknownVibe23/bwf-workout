@@ -183,6 +183,41 @@ async function runView(root, active) {
     });
     els.repsInput = repsInput;
 
+    let holdWidget = null;
+    if (isHold) {
+      els.holdDisplay = h('span', { class: 'hold-display' },
+        fmtTime(active.holdStart ? (Date.now() - active.holdStart) / 1000 : 0));
+      const toggleBtn = h('button', {
+        class: 'btn btn-secondary',
+        onclick: async () => {
+          if (active.holdStart) {
+            const secs = Math.round((Date.now() - active.holdStart) / 1000);
+            active.holdStart = null;
+            repsInput.value = String(secs);
+            els.holdDisplay.textContent = fmtTime(secs);
+            toggleBtn.textContent = '▶ Start hold';
+          } else {
+            active.holdStart = Date.now();
+            toggleBtn.textContent = '⏹ Stop';
+          }
+          await saveActive(active);
+        },
+      }, active.holdStart ? '⏹ Stop' : '▶ Start hold');
+      holdWidget = h('div', { class: 'hold-timer' },
+        els.holdDisplay,
+        toggleBtn,
+        h('button', {
+          class: 'btn btn-ghost btn-step-sm', title: 'Reset hold timer',
+          onclick: async () => {
+            active.holdStart = null;
+            els.holdDisplay.textContent = fmtTime(0);
+            toggleBtn.textContent = '▶ Start hold';
+            await saveActive(active);
+          },
+        }, '↺'),
+      );
+    }
+
     const chips = entry.sets.map((r, i) => {
       if (typeof r !== 'number') return null;
       return h('button', {
@@ -218,10 +253,11 @@ async function runView(root, active) {
       h('div', { class: 'target-line' },
         isHold ? `Hold ${target.range[0]}–${target.range[1]}s per set` : `Target: ${target.range[0]}–${target.range[1]} reps`,
         h('span', { class: 'muted' }, ` · suggested ${suggestion}${isHold ? 's' : ''}`)),
+      holdWidget,
       h('div', { class: 'reps-row' },
-        h('button', { class: 'btn btn-secondary btn-step', onclick: () => { repsInput.value = String(clamp((parseInt(repsInput.value, 10) || 0) - 1, 0, 99)); } }, '−'),
+        h('button', { class: 'btn btn-secondary btn-step', onclick: () => { repsInput.value = String(clamp((parseInt(repsInput.value, 10) || 0) - 1, 0, isHold ? 600 : 99)); } }, '−'),
         repsInput,
-        h('button', { class: 'btn btn-secondary btn-step', onclick: () => { repsInput.value = String(clamp((parseInt(repsInput.value, 10) || 0) + 1, 0, 99)); } }, '+'),
+        h('button', { class: 'btn btn-secondary btn-step', onclick: () => { repsInput.value = String(clamp((parseInt(repsInput.value, 10) || 0) + 1, 0, isHold ? 600 : 99)); } }, '+'),
       ),
       h('div', { class: 'chips' }, chips),
       h('button', { class: 'btn btn-primary btn-big btn-block', onclick: completeSet }, '✔ COMPLETE SET'),
@@ -299,6 +335,7 @@ async function runView(root, active) {
     if (isNaN(reps)) reps = 0;
     const entry = active.entries[step.exerciseId];
     entry.sets[step.setNumber - 1] = clamp(reps, 0, 600);
+    active.holdStart = null;
     const n = stepAfterSet(active.queue, active.index);
     if (n.phase === 'rest') {
       const restStep = active.queue[n.index];
@@ -464,6 +501,9 @@ async function runView(root, active) {
 
   function tick() {
     if (els.elapsed) els.elapsed.textContent = `⏱ ${fmtTime((Date.now() - active.startedAt) / 1000)}`;
+    if (els.holdDisplay && active.holdStart) {
+      els.holdDisplay.textContent = fmtTime((Date.now() - active.holdStart) / 1000);
+    }
     if (active.paused) return;
     if (active.phase === 'rest' && active.rest && els.countdown) {
       els.countdown.textContent = fmtTime(remainingMs(active.rest) / 1000);
