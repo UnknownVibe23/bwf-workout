@@ -3,6 +3,7 @@ import {
   buildQueue, stepAfterSet, stepAfterRest, skipExerciseIndex,
   startRest, remainingMs, isRestDone, pauseRest, resumeRest, addRestTime, resetRest,
   isReadyToProgress, suggestedReps, completedSetCount, TOTAL_SETS,
+  isHoldProgression, targetFor,
 } from '../js/engine.js';
 import { EXERCISES, PAIRS, CORE } from '../js/data.js';
 
@@ -122,5 +123,31 @@ assert.equal(suggestedReps([], [8, 12]), 8);
 // --- Completed count ---
 assert.equal(completedSetCount({ a: { sets: [5, 6, null] }, b: { sets: [8, 8, 8] } }), 5);
 assert.equal(completedSetCount({}), 0);
+
+// --- Hold-type progressions (timed in seconds, progress at 3x30s) ---
+assert.ok(isHoldProgression('Arch hangs'));
+assert.ok(isHoldProgression('Parallel bar support hold'));
+assert.ok(isHoldProgression('Plank'));
+assert.ok(isHoldProgression('Arch body hold'));
+assert.ok(!isHoldProgression('Pull-ups'));
+assert.ok(!isHoldProgression('Ring ab rollouts'));
+assert.deepEqual(targetFor(EXERCISES.pullups, 'Arch hangs'), { range: [10, 30], unit: 'seconds' });
+assert.deepEqual(targetFor(EXERCISES.dips, 'Parallel bar support hold'), { range: [10, 30], unit: 'seconds' });
+assert.deepEqual(targetFor(EXERCISES.antiExtension, 'Plank'), { range: [10, 30], unit: 'seconds' });
+assert.deepEqual(targetFor(EXERCISES.pullups, 'Pull-ups'), { range: [5, 8], unit: 'reps' });
+assert.deepEqual(targetFor(EXERCISES.antiExtension, 'Ring ab rollouts'), { range: [8, 12], unit: 'reps' });
+assert.ok(isReadyToProgress([30, 30, 30], [10, 30]), '3x30s hold ready');
+assert.ok(!isReadyToProgress([30, 30, 29], [10, 30]), 'not ready below 30s');
+assert.equal(suggestedReps([20, 20, 20], [10, 30]), 21);
+assert.equal(suggestedReps(null, [10, 30]), 10);
+
+// --- Alternate paths exist only for the core triplet ---
+for (const id of ['pullups', 'squats', 'dips', 'hinge', 'rows', 'pushups']) {
+  assert.equal(EXERCISES[id].altPaths, undefined, `${id} has a single main path`);
+}
+assert.equal(EXERCISES.antiExtension.altPaths.length, 3);
+assert.equal(EXERCISES.antiRotation.altPaths.length, 2);
+assert.equal(EXERCISES.extension.altPaths.length, 2);
+assert.deepEqual(EXERCISES.antiExtension.altPaths[0], ['Kneeling ab wheel rollouts', 'Standing ab wheel rollouts']);
 
 console.log('All engine tests passed.');

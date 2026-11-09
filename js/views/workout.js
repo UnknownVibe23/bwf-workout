@@ -3,11 +3,11 @@ import { EXERCISES, EXERCISE_ORDER, PAIRS, CORE, SETS_PER_EXERCISE } from '../da
 import {
   buildQueue, stepAfterSet, stepAfterRest, skipExerciseIndex,
   startRest, remainingMs, isRestDone, pauseRest, resumeRest, addRestTime, resetRest,
-  suggestedReps, isReadyToProgress, completedSetCount, TOTAL_SETS,
+  suggestedReps, isReadyToProgress, completedSetCount, TOTAL_SETS, targetFor,
 } from '../engine.js';
 import {
   getActive, saveActive, clearActive, getAllProgressions, progressionName,
-  setProgressionLevel, lastEntryFor, addWorkout, settings,
+  setProgressionLevel, setProgressionPath, lastEntryFor, addWorkout, settings,
 } from '../store.js';
 import { acquireWakeLock, releaseWakeLock, wakeLockSupported } from '../wake.js';
 import { notifyRestFinished, unlockAudio } from '../notify.js';
@@ -44,6 +44,19 @@ async function setupView(root) {
     h('div', { class: 'setup-group-label' }, g.label),
     g.ids.map((id) => {
       const rec = progs[id];
+      const controls = [];
+      if (rec.pathCount > 1) {
+        const pathSel = h('select', { class: 'select select-path', 'aria-label': `${EXERCISES[id].name} progression path` },
+          Array.from({ length: rec.pathCount }, (_, i) =>
+            h('option', { value: String(i), selected: i === rec.path ? true : null }, i === 0 ? 'Main path' : `Alternate path ${i}`)),
+        );
+        pathSel.addEventListener('change', async () => {
+          await setProgressionPath(id, parseInt(pathSel.value, 10));
+          root.innerHTML = '';
+          await setupView(root);
+        });
+        controls.push(pathSel);
+      }
       const sel = h('select', { class: 'select', 'aria-label': `${EXERCISES[id].name} progression` },
         rec.list.map((name, i) => h('option', { value: String(i), selected: i === rec.level ? true : null }, name)),
       );
@@ -51,9 +64,10 @@ async function setupView(root) {
         await setProgressionLevel(id, parseInt(sel.value, 10));
       });
       selects[id] = sel;
+      controls.push(sel);
       return h('div', { class: 'setup-row' },
         h('span', { class: 'setup-exercise' }, EXERCISES[id].name),
-        sel,
+        h('div', { class: 'setup-controls' }, controls),
       );
     }),
   ));
@@ -65,7 +79,7 @@ async function setupView(root) {
       const fresh = await getAllProgressions();
       const entries = {};
       for (const id of EXERCISE_ORDER) {
-        entries[id] = { level: fresh[id].level, progression: progressionName(fresh[id]), sets: [] };
+        entries[id] = { level: fresh[id].level, path: fresh[id].path, progression: progressionName(fresh[id]), sets: [] };
       }
       const active = {
         startedAt: Date.now(),
@@ -145,9 +159,11 @@ async function runView(root, active) {
   async function renderExercisePanel(step) {
     const ex = EXERCISES[step.exerciseId];
     const entry = active.entries[step.exerciseId];
-    const lastEntry = await lastEntryFor(step.exerciseId, entry.level);
-    const suggestion = suggestedReps(lastEntry ? lastEntry.sets : null, ex.repRange);
-    const ready = lastEntry && isReadyToProgress(lastEntry.sets, ex.repRange);
+    const target = targetFor(ex, entry.progression);
+    const isHold = target.unit === 'seconds';
+    const lastEntry = await lastEntryFor(step.exerciseId, entry.level, entry.path || 0);
+    const suggestion = suggestedReps(lastEntry ? lastEntry.sets : null, target.range);
+    const ready = lastEntry && isReadyToProgress(lastEntry.sets, target.range);
 
     const nextRest = active.queue[active.index + 1];
     const afterRest = active.queue[active.index + 2];
@@ -160,8 +176,8 @@ async function runView(root, active) {
     }
 
     const repsInput = h('input', {
-      class: 'reps-input', type: 'number', inputmode: 'numeric', min: '0', max: '99',
-      value: String(suggestion), 'aria-label': 'Reps completed',
+      class: 'reps-input', type: 'number', inputmode: 'numeric', min: '0', max: isHold ? '600' : '99',
+      value: String(suggestion), 'aria-label': isHold ? 'Hold time in seconds' : 'Reps completed',
     });
     els.repsInput = repsInput;
 
@@ -175,7 +191,7 @@ async function runView(root, active) {
           input.addEventListener('change', async () => {
             let v = parseInt(input.value, 10);
             if (isNaN(v)) v = 0;
-            entry.sets[i] = clamp(v, 0, 99);
+            entry.sets[i] = clamp(v, 0, 600);
             await saveActive(active);
             renderPanel();
           });
@@ -186,7 +202,7 @@ async function runView(root, active) {
           input.focus();
           input.select();
         },
-      }, `Set ${i + 1}: ${r}`);
+      }, `Set ${i + 1}: ${r}${isHold ? 's' : ''}`);
     });
 
     els.panel.append(
@@ -194,11 +210,12 @@ async function runView(root, active) {
       h('h2', { class: 'exercise-name' }, ex.name),
       h('div', { class: 'progression-line' },
         h('span', { class: 'badge' }, entry.progression),
-        ready ? h('span', { class: 'badge badge-accent', title: 'You hit the top of the rep range for all 3 sets — consider the next progression at your next workout' }, 'ready to progress ↑') : null,
+        ready ? h('span', { class: 'badge badge-accent', title: isHold ? 'You held 30s for all 3 sets — consider the next progression at your next workout' : 'You hit the top of the rep range for all 3 sets — consider the next progression at your next workout' }, 'ready to progress ↑') : null,
       ),
       h('div', { class: 'set-indicator' }, `Set ${step.setNumber} of ${SETS_PER_EXERCISE}`),
-      h('div', { class: 'target-line' }, `Target: ${ex.repRange[0]}–${ex.repRange[1]} reps`,
-        h('span', { class: 'muted' }, ` · suggested ${suggestion}`)),
+      h('div', { class: 'target-line' },
+        isHold ? `Hold ${target.range[0]}–${target.range[1]}s per set` : `Target: ${target.range[0]}–${target.range[1]} reps`,
+        h('span', { class: 'muted' }, ` · suggested ${suggestion}${isHold ? 's' : ''}`)),
       h('div', { class: 'reps-row' },
         h('button', { class: 'btn btn-secondary btn-step', onclick: () => { repsInput.value = String(clamp((parseInt(repsInput.value, 10) || 0) - 1, 0, 99)); } }, '−'),
         repsInput,
@@ -268,7 +285,7 @@ async function runView(root, active) {
     let reps = parseInt(els.repsInput.value, 10);
     if (isNaN(reps)) reps = 0;
     const entry = active.entries[step.exerciseId];
-    entry.sets[step.setNumber - 1] = clamp(reps, 0, 99);
+    entry.sets[step.setNumber - 1] = clamp(reps, 0, 600);
     const n = stepAfterSet(active.queue, active.index);
     if (n.phase === 'rest') {
       const restStep = active.queue[n.index];

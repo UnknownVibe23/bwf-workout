@@ -7,6 +7,7 @@ import { workoutView } from './views/workout.js';
 import { historyView, historyDetailView } from './views/history.js';
 import { progressView } from './views/progress.js';
 import { settingsView } from './views/settings.js';
+import { guideView } from './views/guide.js';
 
 const app = document.getElementById('app');
 
@@ -17,6 +18,7 @@ const routes = [
   { re: /^#\/history\/(\d+)$/, view: historyDetailView },
   { re: /^#\/progress$/, view: progressView },
   { re: /^#\/settings$/, view: settingsView },
+  { re: /^#\/guide$/, view: guideView },
 ];
 
 let cleanup = null;

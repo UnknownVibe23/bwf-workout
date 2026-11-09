@@ -4,7 +4,7 @@ import {
   progressionName, lastEntryFor, settings,
 } from '../store.js';
 import { EXERCISES, EXERCISE_ORDER, PAIRS, CORE } from '../data.js';
-import { isReadyToProgress } from '../engine.js';
+import { isReadyToProgress, targetFor } from '../engine.js';
 
 export async function homeView(root) {
   const [workouts, count, active, progs] = await Promise.all([
@@ -40,11 +40,13 @@ export async function homeView(root) {
   for (const id of EXERCISE_ORDER) {
     const ex = EXERCISES[id];
     const rec = progs[id];
-    const lastEntry = await lastEntryFor(id, rec.level);
+    const lastEntry = await lastEntryFor(id, rec.level, rec.path);
+    const target = targetFor(ex, progressionName(rec));
+    const unit = target.unit === 'seconds' ? 's' : '';
     const setsTxt = lastEntry && lastEntry.sets.some((r) => typeof r === 'number')
-      ? lastEntry.sets.map((r) => (typeof r === 'number' ? r : '–')).join(' · ')
+      ? lastEntry.sets.map((r) => (typeof r === 'number' ? `${r}${unit}` : '–')).join(' · ')
       : '—';
-    const ready = lastEntry && isReadyToProgress(lastEntry.sets, ex.repRange);
+    const ready = lastEntry && isReadyToProgress(lastEntry.sets, target.range);
     progressItems.push(h('div', { class: 'progress-item' },
       h('div', { class: 'progress-item-main' },
         h('span', { class: 'progress-item-name' }, ex.name),

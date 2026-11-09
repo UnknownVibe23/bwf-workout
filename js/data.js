@@ -96,6 +96,12 @@ export const EXERCISES = {
       'Plank',
       'Ring ab rollouts',
     ],
+    // Alternate progression paths from the official wiki (path 0 = main).
+    altPaths: [
+      ['Kneeling ab wheel rollouts', 'Standing ab wheel rollouts'],
+      ['Tucked hanging leg raises', 'Pike hanging leg raises negative', 'Straight hanging leg raises'],
+      ['Pike compressions'],
+    ],
   },
   antiRotation: {
     id: 'antiRotation',
@@ -105,6 +111,10 @@ export const EXERCISES = {
     defaultProgressions: [
       'Banded Pallof press',
     ],
+    altPaths: [
+      ['Assisted knee Copenhagen plank', 'Knee Copenhagen plank', 'Assisted Copenhagen plank', 'Copenhagen plank', 'Copenhagen plank with movement'],
+      ['Ring Pallof press'],
+    ],
   },
   extension: {
     id: 'extension',
@@ -113,6 +123,10 @@ export const EXERCISES = {
     repRange: [8, 12],
     defaultProgressions: [
       'Reverse hyperextension',
+    ],
+    altPaths: [
+      ['Arch raises', 'Arch body hold', 'Arch body rocks'],
+      ['Hyper extension'],
     ],
   },
 };

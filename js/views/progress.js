@@ -1,7 +1,7 @@
 import { h, fmtDate } from '../util.js';
 import { EXERCISES, EXERCISE_ORDER } from '../data.js';
-import { isReadyToProgress } from '../engine.js';
-import { getAllWorkouts, getAllProgressions, progressionName, setProgressionLevel, lastEntryFor } from '../store.js';
+import { isReadyToProgress, targetFor } from '../engine.js';
+import { getAllWorkouts, getAllProgressions, progressionName, setProgressionLevel, setProgressionPath, lastEntryFor } from '../store.js';
 
 function svgEl(tag, attrs = {}, ...children) {
   const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -10,7 +10,7 @@ function svgEl(tag, attrs = {}, ...children) {
   return el;
 }
 
-function barChart(values, labels) {
+function barChart(values, labels, unit) {
   const max = Math.max(1, ...values.map((v) => v.value));
   const W = 260;
   const H = 72;
@@ -26,7 +26,7 @@ function barChart(values, labels) {
       class: 'chart-bar',
     });
     const title = svgEl('title');
-    title.textContent = `${labels[i]}: ${v.value} reps`;
+    title.textContent = `${labels[i]}: ${v.value}${unit}`;
     rect.append(title);
     return rect;
   });
@@ -43,8 +43,10 @@ export async function progressView(root) {
   for (const id of EXERCISE_ORDER) {
     const ex = EXERCISES[id];
     const rec = progs[id];
-    const lastEntry = await lastEntryFor(id, rec.level);
-    const ready = lastEntry && isReadyToProgress(lastEntry.sets, ex.repRange);
+    const lastEntry = await lastEntryFor(id, rec.level, rec.path);
+    const target = targetFor(ex, progressionName(rec));
+    const unit = target.unit === 'seconds' ? 's' : '';
+    const ready = lastEntry && isReadyToProgress(lastEntry.sets, target.range);
 
     const history = workouts
       .filter((w) => w.exercises && w.exercises[id])
@@ -65,21 +67,39 @@ export async function progressView(root) {
       await progressView(root);
     });
 
+    const headControls = [sel];
+    if (rec.pathCount > 1) {
+      const pathSel = h('select', { class: 'select select-inline', 'aria-label': `${ex.name} progression path` },
+        Array.from({ length: rec.pathCount }, (_, i) =>
+          h('option', { value: String(i), selected: i === rec.path ? true : null }, i === 0 ? 'Main path' : `Alt path ${i}`)),
+      );
+      pathSel.addEventListener('change', async () => {
+        await setProgressionPath(id, parseInt(pathSel.value, 10));
+        root.innerHTML = '';
+        await progressView(root);
+      });
+      headControls.unshift(pathSel);
+    }
+
     cards.push(h('div', { class: 'card progress-card' },
       h('div', { class: 'progress-card-head' },
         h('div', {},
           h('div', { class: 'progress-item-name' }, ex.name),
           h('div', { class: 'progress-item-prog' },
-            `Rep range ${ex.repRange[0]}–${ex.repRange[1]} · best ${best} reps` +
+            (target.unit === 'seconds'
+              ? `Hold ${target.range[0]}–${target.range[1]}s · best ${best}s`
+              : `Rep range ${target.range[0]}–${target.range[1]} · best ${best} reps`) +
             (ready ? ' · 3× top of range — ready to progress ↑' : '')),
         ),
-        sel,
+        h('div', { class: 'progress-card-controls' }, headControls),
       ),
       lastEntry && lastEntry.sets.some((r) => typeof r === 'number')
-        ? h('div', { class: 'chips' }, lastEntry.sets.map((r, i) => h('span', { class: r == null ? 'chip chip-skipped' : 'chip' }, `S${i + 1}: ${typeof r === 'number' ? r : '–'}`)))
+        ? h('div', { class: 'chips' }, lastEntry.sets.map((r, i) => h('span', { class: r == null ? 'chip chip-skipped' : 'chip' }, `S${i + 1}: ${typeof r === 'number' ? `${r}${unit}` : '–'}`)))
         : h('p', { class: 'muted' }, 'No sets logged yet at this progression.'),
-      values.length ? barChart(values, labels) : null,
-      ready ? h('p', { class: 'badge badge-accent badge-block' }, 'You reached 3 sets at the top of the rep range — you may move to the next progression when ready.') : null,
+      values.length ? barChart(values, labels, unit) : null,
+      ready ? h('p', { class: 'badge badge-accent badge-block' }, target.unit === 'seconds'
+        ? 'You held 30s for all 3 sets — you may move to the next progression when ready.'
+        : 'You reached 3 sets at the top of the rep range — you may move to the next progression when ready.') : null,
     ));
   }
 

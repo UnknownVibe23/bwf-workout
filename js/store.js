@@ -35,11 +35,18 @@ export async function setSetting(key, value) {
 // --- Progressions ---
 
 export async function getProgressionRecord(exerciseId) {
+  const ex = EXERCISES[exerciseId];
   const r = await dbGet('progressions', exerciseId);
-  const def = EXERCISES[exerciseId].defaultProgressions;
-  const list = r && Array.isArray(r.customList) && r.customList.length ? r.customList : def;
+  const pathCount = 1 + (Array.isArray(ex.altPaths) ? ex.altPaths.length : 0);
+  const path = r ? clamp(r.path || 0, 0, pathCount - 1) : 0;
+  let list;
+  if (path === 0) {
+    list = r && Array.isArray(r.customList) && r.customList.length ? r.customList : ex.defaultProgressions;
+  } else {
+    list = (ex.altPaths && ex.altPaths[path - 1]) || ex.defaultProgressions;
+  }
   const level = r ? clamp(r.level || 0, 0, list.length - 1) : 0;
-  return { exerciseId, level, list, customList: r && r.customList ? r.customList : null };
+  return { exerciseId, level, path, pathCount, list, customList: r && r.customList ? r.customList : null };
 }
 
 export async function getAllProgressions() {
@@ -54,9 +61,22 @@ export function progressionName(rec) {
 
 export async function setProgressionLevel(exerciseId, level) {
   const prev = await dbGet('progressions', exerciseId);
+  const rec = await getProgressionRecord(exerciseId);
   await dbPut('progressions', {
     exerciseId,
-    level: clamp(level, 0, (prev && prev.customList && prev.customList.length ? prev.customList : EXERCISES[exerciseId].defaultProgressions).length - 1),
+    level: clamp(level, 0, rec.list.length - 1),
+    path: rec.path,
+    customList: prev && prev.customList ? prev.customList : undefined,
+  });
+}
+
+export async function setProgressionPath(exerciseId, path) {
+  const prev = await dbGet('progressions', exerciseId);
+  const rec = await getProgressionRecord(exerciseId);
+  await dbPut('progressions', {
+    exerciseId,
+    level: 0,
+    path: clamp(path, 0, rec.pathCount - 1),
     customList: prev && prev.customList ? prev.customList : undefined,
   });
 }
@@ -71,12 +91,12 @@ export async function setProgressionList(exerciseId, list) {
   });
 }
 
-// Most recent workout entry for an exercise at the given progression level.
-export async function lastEntryFor(exerciseId, level) {
+// Most recent workout entry for an exercise at the given progression level and path.
+export async function lastEntryFor(exerciseId, level, path = 0) {
   const workouts = await getAllWorkouts();
   for (const w of workouts) {
     const e = w.exercises && w.exercises[exerciseId];
-    if (e && e.level === level && Array.isArray(e.sets)) return e;
+    if (e && e.level === level && (e.path || 0) === path && Array.isArray(e.sets)) return e;
   }
   return null;
 }

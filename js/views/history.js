@@ -1,5 +1,6 @@
 import { h, fmtDate, fmtDateTime, fmtDuration, confirmModal, clamp } from '../util.js';
 import { EXERCISES, EXERCISE_ORDER } from '../data.js';
+import { isHoldProgression } from '../engine.js';
 import { getAllWorkouts, getWorkout, updateWorkout, deleteWorkout } from '../store.js';
 
 function totalReps(w) {
@@ -59,6 +60,7 @@ export async function historyDetailView(root, params) {
     const ex = EXERCISES[exId];
     const e = w.exercises && w.exercises[exId];
     if (!e) return null;
+    const unit = isHoldProgression(e.progression) ? 's' : '';
     const sets = (e.sets || []).map((r, i) => {
       if (typeof r !== 'number') return h('span', { class: 'chip chip-skipped' }, `S${i + 1}: –`);
       return h('button', {
@@ -69,7 +71,7 @@ export async function historyDetailView(root, params) {
           input.addEventListener('change', async () => {
             let v = parseInt(input.value, 10);
             if (isNaN(v)) v = 0;
-            e.sets[i] = clamp(v, 0, 99);
+            e.sets[i] = clamp(v, 0, 600);
             await updateWorkout(w);
             root.innerHTML = '';
             await historyDetailView(root, params);
@@ -80,7 +82,7 @@ export async function historyDetailView(root, params) {
           input.focus();
           input.select();
         },
-      }, `S${i + 1}: ${r}`);
+      }, `S${i + 1}: ${r}${unit}`);
     });
     const mine = (e.sets || []).reduce((s, r) => s + (typeof r === 'number' ? r : 0), 0);
     let delta = null;

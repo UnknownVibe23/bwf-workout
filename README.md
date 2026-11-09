@@ -96,8 +96,15 @@ registers, then install (below).
   between sessions** — shown as a hint on the home screen.
 - Progression principle: start at 3× low end of the rep range, add reps, and
   once you hit 3× the top of the range with good form the app flags "ready to
-  progress". Changing progression resets the suggested target to the low end.
-  The app never changes your progression automatically.
+  progress". Changing progression (or path) resets the suggested target to the
+  low end. The app never changes your progression automatically.
+- Core triplet exercises offer the official **alternate progression paths**
+  (Main / Alternate 1–3) on the setup and Progress screens. Static holds
+  (arch hangs, support hold, plank) are timed in **seconds** with the 3×30s
+  ready-to-progress rule.
+- **Guide** tab: official routine instructions (pairing, rest times, 10X0
+  tempo, failure-1 rep strategy, 3×/week schedule) with links to the official
+  wiki pages.
 - **Settings** → export/import your full history as JSON, reset data, change
   rest times, sound/vibration, theme, wake lock, and edit progression lists.
 
