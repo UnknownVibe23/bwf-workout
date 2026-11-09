@@ -143,6 +143,7 @@ export async function exportData() {
   return {
     app: 'bwf-workout-companion',
     version: 1,
+    appVersion: (typeof window !== 'undefined' && window.APP_VERSION) || 'unknown',
     exportedAt: new Date().toISOString(),
     settings: settingsObj,
     progressions: progressionRows,

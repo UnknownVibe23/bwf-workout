@@ -276,6 +276,8 @@ html[data-theme="light"] body.resting { --bg: #dff0e4; }
 .prog-editor-row { display: flex; gap: 8px; margin-top: 6px; }
 .input-list { flex: 1; font-size: 0.9rem; }
 
+.version-line { text-align: center; font-size: 0.8rem; margin: 4px 0 18px; }
+
 /* ---------- Guide ---------- */
 .guide-section h2 { margin-top: 0; }
 .guide-list { margin: 8px 0 0; padding-left: 20px; }

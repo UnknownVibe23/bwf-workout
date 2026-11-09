@@ -108,6 +108,18 @@ registers, then install (below).
 - **Settings** → export/import your full history as JSON, reset data, change
   rest times, sound, theme, wake lock.
 
+## Versioning
+
+SemVer in a single place: `version.js` at the repo root (`var APP_VERSION = '1.0.0'`).
+The page loads it via `<script>` (shown in Settings, written into exports as
+`appVersion`), and the service worker reads it via `importScripts` to build its
+cache name (`bwf-workout-v1-0-0`), so cache busting can't drift from the version.
+
+Bump **once per merge to `main`** (never per commit): PATCH for fixes, MINOR for
+new features, MAJOR for breaking changes. Optionally tag the merge (`git tag v1.0.0`).
+`version: 1` inside exported JSON files is the backup *format* version, separate
+from the app version.
+
 ## Security & privacy
 
 Threat model: single-user, local-only app. There is no backend, no account,

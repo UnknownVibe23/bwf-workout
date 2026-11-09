@@ -1,6 +1,8 @@
-const CACHE_NAME = 'bwf-workout-v7';
+importScripts('./version.js');
+const CACHE_NAME = 'bwf-workout-v' + APP_VERSION.replace(/\./g, '-');
 const APP_SHELL = [
   './',
+  './version.js',
   './index.html',
   './manifest.webmanifest',
   './css/styles.css',

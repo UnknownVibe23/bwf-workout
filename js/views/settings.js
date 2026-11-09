@@ -103,6 +103,7 @@ export async function settingsView(root) {
           h('span', { class: 'setting-label' }, 'Theme'), themeSel),
       ),
     ),
+    h('p', { class: 'muted version-line' }, `BWF Workout v${(typeof window !== 'undefined' && window.APP_VERSION) || '?'}`),
     h('section', { class: 'section' },
       h('h2', { class: 'section-title' }, 'Data'),
       h('div', { class: 'card stack' },
