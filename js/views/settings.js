@@ -117,7 +117,6 @@ export async function settingsView(root) {
       h('h2', { class: 'section-title' }, 'Notifications & display'),
       h('div', { class: 'card' },
         toggleField('Sound when rest timer ends', 'sound'),
-        toggleField('Vibration when rest timer ends', 'vibration'),
         toggleField('Keep screen awake during workout', 'wakeLock'),
         h('label', { class: 'setting-row' },
           h('span', { class: 'setting-label' }, 'Theme'), themeSel),

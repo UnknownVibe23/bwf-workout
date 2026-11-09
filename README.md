@@ -31,7 +31,7 @@ js/
   db.js                  Minimal IndexedDB promise wrapper
   store.js               Settings, progression selections, active session, workout records, export/import
   session.js             Shared UI flags
-  notify.js              Sound + vibration on rest end
+  notify.js              Loud sound on rest end
   wake.js                Screen Wake Lock (+ fallback), reacquire on visibilitychange
   main.js                Router, app init, service worker registration
   util.js                DOM helpers, formatting, modal, JSON download
@@ -88,7 +88,7 @@ registers, then install (below).
   on the setup screen (selections persist).
 - Press **Complete Set**, enter reps, and the rest timer starts automatically
   (90s pairs / 60s core by default; editable in Settings). The timer offers
-  Pause / Resume / +15s / Skip / Reset, beeps and vibrates when it ends, then
+  Pause / Resume / +15s / Skip / Reset, beeps loudly when it ends, then
   moves to the next set automatically. No rest timer after the final set.
 - Progress is saved to IndexedDB after **every set**; closing the browser or
   rebooting the phone resumes the exact exercise, set and remaining rest time.
@@ -106,7 +106,7 @@ registers, then install (below).
   tempo, failure-1 rep strategy, 3×/week schedule) with links to the official
   wiki pages.
 - **Settings** → export/import your full history as JSON, reset data, change
-  rest times, sound/vibration, theme, wake lock, and edit progression lists.
+  rest times, sound, theme, wake lock, and edit progression lists.
 
 ## Security & privacy
 
@@ -127,7 +127,7 @@ the fixed `reddit.com` wiki links on the Guide tab, which open in the browser
   app shell; scope is `./`.
 - Import validates backup files (structure + known exercise ids) before
   writing to the database. Only import backups you trust.
-- Browser permissions used: Screen Wake Lock, Vibration, Web Audio (all
+- Browser permissions used: Screen Wake Lock and Web Audio (
   benign, no camera/mic/location). The app must be served over HTTPS
   (GitHub Pages provides this) for the service worker and install to work.
 

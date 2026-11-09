@@ -6,7 +6,6 @@ export const DEFAULT_SETTINGS = {
   restPair: 90,
   restCore: 60,
   sound: true,
-  vibration: true,
   theme: 'dark',
   wakeLock: true,
 };
