@@ -195,9 +195,10 @@ html[data-theme="light"] body.resting { --bg: #dff0e4; }
 .next-preview { text-align: center; color: var(--text-muted); margin: 14px 0 4px; font-size: 1rem; }
 
 .rest-label { text-align: center; color: var(--accent); font-weight: 900; letter-spacing: 0.3em; font-size: 2rem; margin-top: 8px; text-transform: uppercase; }
-.hold-timer { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 10px 0 4px; }
-.hold-display { font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 96px; text-align: center; }
-.btn-step-sm { width: 48px; height: 48px; min-height: 48px; border-radius: 12px; font-size: 1.1rem; }
+.hold-timer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin: 10px 0 4px; }
+.hold-timer .btn { height: 52px; min-height: 52px; padding: 10px 16px; }
+.hold-display { font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 96px; height: 52px; line-height: 52px; text-align: center; }
+.btn-step-sm { width: 52px; height: 52px; min-height: 52px; border-radius: 12px; font-size: 1.1rem; }
 .elapsed { font-size: 0.85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .countdown {
   text-align: center;
