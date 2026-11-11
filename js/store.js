@@ -5,6 +5,8 @@ import { clamp } from './util.js';
 export const DEFAULT_SETTINGS = {
   restPair: 90,
   restCore: 60,
+  restTriplet: 50,
+  defaultMode: 'standard',
   sound: true,
   theme: 'dark',
   wakeLock: true,

@@ -285,6 +285,12 @@ html[data-theme="light"] body.resting { --bg: #dff0e4; }
 .guide-link { color: var(--accent); }
 
 /* ---------- Setup ---------- */
+.mode-picker { display: grid; gap: 8px; }
+.mode-card { display: flex; align-items: baseline; gap: 10px; border: 2px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--bg-card); cursor: pointer; }
+.mode-card.selected { border-color: var(--accent); }
+.mode-card input { accent-color: var(--accent); }
+.mode-title { font-weight: 800; }
+.mode-meta { display: block; color: var(--text-muted); font-size: 0.85rem; font-weight: 400; margin-top: 2px; }
 .setup-group { margin-bottom: 18px; }
 .setup-group-label { font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.8rem; margin-bottom: 6px; }
 .setup-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }

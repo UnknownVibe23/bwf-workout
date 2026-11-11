@@ -35,7 +35,7 @@ export async function historyView(root) {
       },
         h('div', { class: 'history-item-main' },
           h('span', { class: 'history-item-title' }, `Workout #${total - i}`),
-          h('span', { class: 'history-item-sub' }, `${fmtDate(w.date)} · ${fmtDuration(w.durationSec)} · ${totalReps(w)} reps`),
+          h('span', { class: 'history-item-sub' }, `${fmtDate(w.date)} · ${fmtDuration(w.durationSec)} · ${totalReps(w)} reps${w.mode === 'triplet' ? ' · ⚡ triplet' : ''}`),
         ),
         h('span', { class: 'chevron' }, '›'),
       )),
@@ -107,7 +107,7 @@ export async function historyDetailView(root, params) {
     h('section', { class: 'section' },
       h('a', { class: 'back-link', href: '#/history' }, '‹ History'),
       h('h1', { class: 'screen-title' }, `Workout #${total - idx}`),
-      h('p', { class: 'muted' }, `${fmtDateTime(w.date)} · duration ${fmtDuration(w.durationSec)} · ${totalReps(w)} total reps`),
+      h('p', { class: 'muted' }, `${fmtDateTime(w.date)} · duration ${fmtDuration(w.durationSec)} · ${totalReps(w)} total reps · ${w.mode === 'triplet' ? '⚡ triplet mode' : 'standard mode'}`),
       h('div', { class: 'btn-row' },
         h('button', {
           class: 'btn btn-danger',
