@@ -35,6 +35,12 @@ export async function settingsView(root) {
   );
   themeSel.addEventListener('change', () => setSetting('theme', themeSel.value));
 
+  const modeSel = h('select', { class: 'select' },
+    h('option', { value: 'standard', selected: settings.defaultMode !== 'triplet' ? true : null }, 'Standard (pairs, 90s/60s)'),
+    h('option', { value: 'triplet', selected: settings.defaultMode === 'triplet' ? true : null }, 'Triplet / short (~50s rests)'),
+  );
+  modeSel.addEventListener('change', () => setSetting('defaultMode', modeSel.value));
+
   const exportBtn = h('button', {
     class: 'btn btn-secondary btn-block',
     onclick: async () => {
@@ -92,6 +98,7 @@ export async function settingsView(root) {
       h('div', { class: 'card' },
         numberField('Rest between pair sets (seconds)', 'restPair', 10, 600),
         numberField('Rest between core sets (seconds)', 'restCore', 10, 600),
+        numberField('Rest between sets in triplet mode (seconds)', 'restTriplet', 10, 600),
       ),
     ),
     h('section', { class: 'section' },
@@ -101,6 +108,8 @@ export async function settingsView(root) {
         toggleField('Keep screen awake during workout', 'wakeLock'),
         h('label', { class: 'setting-row' },
           h('span', { class: 'setting-label' }, 'Theme'), themeSel),
+        h('div', { class: 'setting-row' },
+          h('span', { class: 'setting-label' }, 'Default workout mode (asked at each workout start)'), modeSel),
       ),
     ),
     h('p', { class: 'muted version-line' }, `BWF Workout v${(typeof window !== 'undefined' && window.APP_VERSION) || '?'}`),

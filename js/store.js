@@ -5,6 +5,8 @@ import { clamp } from './util.js';
 export const DEFAULT_SETTINGS = {
   restPair: 90,
   restCore: 60,
+  restTriplet: 50,
+  defaultMode: 'standard',
   sound: true,
   theme: 'dark',
   wakeLock: true,
@@ -151,6 +153,32 @@ export async function exportData() {
   };
 }
 
+function sanitizeWorkout(w) {
+  if (!w || typeof w !== 'object' || !Number.isFinite(w.date) || !w.exercises || typeof w.exercises !== 'object') return null;
+  const exercises = {};
+  for (const id of Object.keys(EXERCISES)) {
+    const e = w.exercises[id];
+    if (!e || typeof e !== 'object') continue;
+    const sets = Array.isArray(e.sets)
+      ? e.sets.slice(0, 3).map((r) => (Number.isFinite(r) ? Math.min(Math.max(Math.trunc(r), 0), 600) : null))
+      : [null, null, null];
+    exercises[id] = {
+      level: Number.isInteger(e.level) ? e.level : 0,
+      path: Number.isInteger(e.path) ? e.path : 0,
+      progression: typeof e.progression === 'string' ? e.progression.slice(0, 200) : '',
+      sets,
+    };
+  }
+  return {
+    date: w.date,
+    durationSec: Number.isFinite(w.durationSec) && w.durationSec > 0 ? Math.trunc(w.durationSec) : 0,
+    mode: w.mode === 'triplet' ? 'triplet' : 'standard',
+    exercises,
+  };
+}
+
+const THEMES = ['dark', 'light', 'system'];
+
 export async function importData(data) {
   if (!data || typeof data !== 'object' || !Array.isArray(data.workouts)) {
     throw new Error('Invalid backup file: missing workouts array.');
@@ -159,20 +187,32 @@ export async function importData(data) {
   await dbClear('progressions');
   await dbClear('settings');
   for (const w of data.workouts) {
-    if (!w || typeof w.date !== 'number' || !w.exercises) continue;
-    const { id, ...rest } = w;
-    await dbAdd('workouts', rest);
+    const clean = sanitizeWorkout(w);
+    if (clean) await dbAdd('workouts', clean);
   }
   if (Array.isArray(data.progressions)) {
     for (const p of data.progressions) {
       if (p && p.exerciseId && EXERCISES[p.exerciseId]) {
-        await dbPut('progressions', { exerciseId: p.exerciseId, level: p.level || 0, customList: p.customList });
+        await dbPut('progressions', {
+          exerciseId: p.exerciseId,
+          level: Number.isInteger(p.level) ? p.level : 0,
+          path: Number.isInteger(p.path) ? p.path : 0,
+          customList: Array.isArray(p.customList)
+            ? p.customList.filter((s) => typeof s === 'string').map((s) => s.slice(0, 120)).filter(Boolean)
+            : undefined,
+        });
       }
     }
   }
   if (data.settings && typeof data.settings === 'object') {
     for (const [key, value] of Object.entries(data.settings)) {
-      if (key in DEFAULT_SETTINGS) await dbPut('settings', { key, value });
+      // hasOwn: 'in' would also match inherited props like 'constructor'
+      if (!Object.hasOwn(DEFAULT_SETTINGS, key)) continue;
+      if (key === 'theme' && !THEMES.includes(value)) continue;
+      if (typeof DEFAULT_SETTINGS[key] === 'number' && !Number.isFinite(value)) continue;
+      if (typeof DEFAULT_SETTINGS[key] === 'boolean' && typeof value !== 'boolean') continue;
+      if (typeof DEFAULT_SETTINGS[key] === 'string' && typeof value !== 'string') continue;
+      await dbPut('settings', { key, value });
     }
   }
   await loadSettings();

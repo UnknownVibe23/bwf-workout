@@ -1,32 +1,59 @@
-import { PAIRS, CORE, SETS_PER_EXERCISE, restKindFor } from './data.js';
+import { PAIRS, CORE, SETS_PER_EXERCISE, restKindFor, EXERCISE_ORDER } from './data.js';
 
 export const TOTAL_SETS = 9 * SETS_PER_EXERCISE;
 
-export function buildQueue() {
+export const MODE_STANDARD = 'standard';
+export const MODE_TRIPLET = 'triplet';
+
+// Standard: 3 pairs + core triplet (90s/60s rests).
+// Triplet ("short") mode per the official guide's FAQ: the six pair exercises
+// become two triplets (guide example: pull-ups, squats, dips) plus the core
+// triplet — 3 triplets cycled 3x each, 50s rest between sets.
+export function exerciseGroups(mode = MODE_STANDARD) {
+  if (mode === MODE_TRIPLET) {
+    const flat = PAIRS.map((p) => p.exercises).flat();
+    return [flat.slice(0, 3), flat.slice(3, 6), [...CORE]];
+  }
+  return [...PAIRS.map((p) => p.exercises), [...CORE]];
+}
+
+function restKindForMode(mode, exerciseId) {
+  if (mode === MODE_TRIPLET) return 'triplet';
+  return restKindFor(exerciseId);
+}
+
+export function buildQueue(mode = MODE_STANDARD) {
+  const groups = exerciseGroups(mode);
   const steps = [];
   const pushSet = (exerciseId, setNumber) =>
     steps.push({ type: 'set', exerciseId, setNumber });
   const pushRest = (exerciseId) =>
-    steps.push({ type: 'rest', kind: restKindFor(exerciseId) });
+    steps.push({ type: 'rest', kind: restKindForMode(mode, exerciseId) });
 
-  for (const pair of PAIRS) {
-    const [a, b] = pair.exercises;
+  for (const group of groups) {
     for (let s = 1; s <= SETS_PER_EXERCISE; s++) {
-      pushSet(a, s);
-      pushRest(a);
-      pushSet(b, s);
-      pushRest(b);
-    }
-  }
-  for (let s = 1; s <= SETS_PER_EXERCISE; s++) {
-    for (const id of CORE) {
-      pushSet(id, s);
-      pushRest(id);
+      for (const id of group) {
+        pushSet(id, s);
+        pushRest(id);
+      }
     }
   }
   // No rest timer after the final set of the entire workout.
   if (steps.length && steps[steps.length - 1].type === 'rest') steps.pop();
   return steps;
+}
+
+// Rough per-set seconds (reps at 10X0 tempo + moving to position / logging).
+export const ASSUMED_SET_SECONDS = 40;
+
+export function estimateMinutes(mode, { restPair = 90, restCore = 60, restTriplet = 50 } = {}) {
+  const q = buildQueue(mode);
+  const sets = q.filter((s) => s.type === 'set').length;
+  const restSec = q.reduce((a, s) => {
+    if (s.type !== 'rest') return a;
+    return a + (s.kind === 'core' ? restCore : s.kind === 'triplet' ? restTriplet : restPair);
+  }, 0);
+  return Math.round((restSec + sets * ASSUMED_SET_SECONDS) / 60);
 }
 
 export function stepAfterSet(queue, index) {
@@ -92,13 +119,13 @@ export function resetRest(rest, now = Date.now()) {
 }
 
 export function isReadyToProgress(sets, repRange) {
-  const nums = (sets || []).filter((r) => typeof r === 'number');
+  const nums = (sets || []).filter((r) => Number.isFinite(r));
   return (sets || []).length === SETS_PER_EXERCISE && nums.length === SETS_PER_EXERCISE && nums.every((r) => r >= repRange[1]);
 }
 
 export function suggestedReps(lastSets, repRange) {
   const [low, high] = repRange;
-  const nums = (lastSets || []).filter((r) => typeof r === 'number');
+  const nums = (lastSets || []).filter((r) => Number.isFinite(r));
   if (!nums.length) return low;
   const min = Math.min(...nums);
   if (min >= high) return high;
@@ -110,6 +137,19 @@ export function suggestedReps(lastSets, repRange) {
 export function isHoldProgression(progressionName) {
   // "arch hangs" is a timed hold, but "hanging leg raises" are reps — match precisely.
   return /hold|plank|arch hang/i.test(String(progressionName));
+}
+
+// Bilateral holds (done per side, e.g. Copenhagen planks) are timed for
+// left and right side; the logged value is the WEAKER side (min), so the
+// 3x30s progression rule only triggers when both sides can hold it.
+export function isBilateralHold(progressionName) {
+  return isHoldProgression(progressionName) && /copenhagen/i.test(String(progressionName));
+}
+
+export function holdInputValue(sides) {
+  const vals = [sides && sides.L, sides && sides.R].filter((v) => Number.isFinite(v));
+  if (!vals.length) return null;
+  return Math.min(...vals);
 }
 
 export function targetFor(exercise, progressionName) {
@@ -139,7 +179,54 @@ export function nextWorkoutDay(lastTs, now = Date.now()) {
 export function completedSetCount(entries) {
   let n = 0;
   for (const id of Object.keys(entries || {})) {
-    for (const r of entries[id].sets) if (typeof r === 'number') n++;
+    for (const r of (entries[id] && entries[id].sets) || []) if (Number.isFinite(r)) n++;
   }
   return n;
+}
+
+// Harden a persisted active session against partial/corrupt writes
+// (e.g. browser killed mid-save): fill defaults, clamp indices, rebuild
+// the queue if it does not match the mode, sanitize entries and rest.
+export function normalizeActive(raw) {
+  const a = raw && typeof raw === 'object' ? raw : {};
+  const mode = a.mode === MODE_TRIPLET ? MODE_TRIPLET : MODE_STANDARD;
+  const expected = buildQueue(mode);
+  const queue = Array.isArray(a.queue) && a.queue.length === expected.length ? a.queue : expected;
+  const index = Number.isInteger(a.index) ? Math.min(Math.max(a.index, 0), queue.length - 1) : 0;
+  let rest = null;
+  if (a.phase === 'rest' && a.rest && typeof a.rest === 'object') {
+    const r = a.rest;
+    if (typeof r.endsAt === 'number' || typeof r.pausedRemaining === 'number') {
+      rest = {
+        endsAt: typeof r.endsAt === 'number' ? r.endsAt : null,
+        durationSec: typeof r.durationSec === 'number' && r.durationSec > 0 ? r.durationSec : 90,
+        pausedRemaining: typeof r.pausedRemaining === 'number' ? r.pausedRemaining : null,
+      };
+    }
+  }
+  const entries = {};
+  for (const id of EXERCISE_ORDER) {
+    const e = a.entries && a.entries[id];
+    const sets = Array.isArray(e && e.sets) ? e.sets.slice(0, SETS_PER_EXERCISE) : [];
+    while (sets.length < SETS_PER_EXERCISE) sets.push(null);
+    entries[id] = {
+      level: Number.isInteger(e && e.level) ? e.level : 0,
+      path: Number.isInteger(e && e.path) ? e.path : 0,
+      progression: typeof (e && e.progression) === 'string' ? e.progression : '',
+      sets,
+    };
+  }
+  return {
+    startedAt: typeof a.startedAt === 'number' ? a.startedAt : Date.now(),
+    mode,
+    queue,
+    index,
+    phase: rest ? 'rest' : (a.phase === 'done' ? 'done' : 'exercise'),
+    rest,
+    paused: a.paused === true,
+    entries,
+    holdStart: typeof a.holdStart === 'number' ? a.holdStart : null,
+    holdSides: a.holdSides && typeof a.holdSides === 'object' ? a.holdSides : { L: null, R: null },
+    holdSide: a.holdSide === 'R' ? 'R' : 'L',
+  };
 }

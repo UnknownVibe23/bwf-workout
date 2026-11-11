@@ -86,6 +86,13 @@ registers, then install (below).
 
 - **Start a workout** from the home screen; pick your progression per exercise
   on the setup screen (selections persist).
+- **Two workout modes**, chosen at workout start with live time estimates:
+  **Standard** (3 pairs alternating, 90s/60s rests, ~50–60 min) and
+  **Triplet / short** — the official guide's time-saver: two strength triplets
+  (pull-ups → squats → dips, hinge → rows → push-ups) plus the core triplet,
+  each cycled 3× with a 50s rest between sets (~35–45 min). The mode is stored
+  with the session and shown in history. Default mode + all rest times are
+  configurable in Settings.
 - Press **Complete Set**, enter reps, and the rest timer starts automatically
   (90s pairs / 60s core by default; editable in Settings). The timer offers
   Pause / Resume / +15s / Skip / Reset, beeps loudly when it ends, then

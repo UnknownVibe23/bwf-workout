@@ -1,9 +1,10 @@
-import { h, fmtTime, fmtDuration, clamp, confirmModal } from '../util.js';
+import { h, appendAll, fmtTime, fmtDuration, clamp, confirmModal } from '../util.js';
 import { EXERCISES, EXERCISE_ORDER, PAIRS, CORE, SETS_PER_EXERCISE } from '../data.js';
 import {
-  buildQueue, stepAfterSet, stepAfterRest, skipExerciseIndex,
+  buildQueue, estimateMinutes, stepAfterSet, stepAfterRest, skipExerciseIndex,
   startRest, remainingMs, isRestDone, pauseRest, resumeRest, addRestTime, resetRest,
   suggestedReps, isReadyToProgress, completedSetCount, TOTAL_SETS, targetFor,
+  isBilateralHold, holdInputValue, normalizeActive,
 } from '../engine.js';
 import {
   getActive, saveActive, clearActive, getAllProgressions, progressionName,
@@ -16,11 +17,9 @@ import { session } from '../session.js';
 let activeCleanup = null;
 
 export async function workoutView(root) {
-  const active = await getActive();
-  if (!active || !Array.isArray(active.queue) || !active.queue.length) {
-    return setupView(root);
-  }
-  return runView(root, active);
+  const raw = await getActive();
+  if (!raw) return setupView(root);
+  return runView(root, normalizeActive(raw));
 }
 
 function groupLabel(exerciseId) {
@@ -33,6 +32,29 @@ function groupLabel(exerciseId) {
 
 async function setupView(root) {
   const progs = await getAllProgressions();
+
+  // Workout mode picker (standard pairs vs. guide's triplet "short" mode),
+  // with live time estimates computed from the current rest settings.
+  let chosenMode = settings.defaultMode === 'triplet' ? 'triplet' : 'standard';
+  const modeCard = (mode, title, desc) => {
+    const input = h('input', { type: 'radio', name: 'workout-mode', value: mode, checked: mode === chosenMode ? true : null });
+    const card = h('label', { class: `mode-card${mode === chosenMode ? ' selected' : ''}` },
+      input,
+      h('span', { class: 'mode-title' }, title),
+      h('span', { class: 'mode-meta' }, desc));
+    input.addEventListener('change', () => {
+      chosenMode = mode;
+      for (const c of root.querySelectorAll('.mode-card')) c.classList.remove('selected');
+      card.classList.add('selected');
+    });
+    return card;
+  };
+  const modePicker = h('div', { class: 'mode-picker' },
+    modeCard('standard', `Standard (pairs) — ~${estimateMinutes('standard', settings)} min`,
+      `3 pairs alternating, ${settings.restPair}s rest between pair sets, ${settings.restCore}s in the core triplet`),
+    modeCard('triplet', `Triplet (short) — ~${estimateMinutes('triplet', settings)} min`,
+      `3 triplets (e.g. pull-ups → squats → dips), ${settings.restTriplet}s rest between all sets — the guide's time-saver, "not recommended" if rest quality drops`),
+  );
 
   const groups = [
     ...PAIRS.map((p) => ({ label: p.label, ids: p.exercises })),
@@ -83,7 +105,8 @@ async function setupView(root) {
       }
       const active = {
         startedAt: Date.now(),
-        queue: buildQueue(),
+        mode: chosenMode,
+        queue: buildQueue(chosenMode),
         index: 0,
         phase: 'exercise',
         rest: null,
@@ -102,9 +125,9 @@ async function setupView(root) {
     h('section', { class: 'section' },
       h('h1', { class: 'screen-title' }, 'New workout'),
       h('p', { class: 'muted' },
-        `9 exercises · 3 sets each · rest ${settings.restPair}s between pair sets, ${settings.restCore}s between core sets. ` +
-        'Pick your current progression for each exercise:'),
+        '9 exercises · 3 sets each. Pick the workout mode and your current progression for each exercise:'),
     ),
+    h('section', { class: 'section' }, modePicker),
     h('section', { class: 'section' }, groupEls),
     beginBtn,
   );
@@ -185,36 +208,69 @@ async function runView(root, active) {
 
     let holdWidget = null;
     if (isHold) {
+      const bilateral = isBilateralHold(entry.progression);
+      if (!active.holdSides) active.holdSides = { L: null, R: null };
+      const sides = active.holdSides;
+      let curSide = active.holdSide || 'L';
+      const sideTxt = (s) => `${s}: ${typeof sides[s] === 'number' ? fmtTime(sides[s]) : '–'}`;
       els.holdDisplay = h('span', { class: 'hold-display' },
         fmtTime(active.holdStart ? (Date.now() - active.holdStart) / 1000 : 0));
+      // NOTE: update the widget in place — do NOT call renderPanel() here,
+      // it would rebuild the reps input and wipe the just-measured time.
+      function refreshHoldWidget() {
+        if (els.holdSides) {
+          const logged = bilateral ? holdInputValue(sides) : null;
+          els.holdSides.textContent = `${sideTxt('L')} · ${sideTxt('R')}` +
+            (typeof logged === 'number' ? ` → logged ${fmtTime(logged)} (weaker side)` : '');
+        }
+        for (const b of sideBtns) b.classList.toggle('side-active', b.dataset.side === curSide);
+        toggleBtn.textContent = active.holdStart ? '⏹ Stop' : `▶ Start hold${bilateral ? ` (${curSide})` : ''}`;
+      }
+      const sideBtns = bilateral ? ['L', 'R'].map((s) => h('button', {
+        class: 'btn btn-ghost btn-step-sm side-btn', 'data-side': s,
+        onclick: async () => { curSide = s; active.holdSide = s; await saveActive(active); refreshHoldWidget(); },
+      }, s)) : [];
       const toggleBtn = h('button', {
         class: 'btn btn-secondary',
         onclick: async () => {
           if (active.holdStart) {
             const secs = Math.round((Date.now() - active.holdStart) / 1000);
             active.holdStart = null;
-            repsInput.value = String(secs);
-            els.holdDisplay.textContent = fmtTime(secs);
-            toggleBtn.textContent = '▶ Start hold';
+            if (bilateral) {
+              sides[curSide] = secs;
+              const v = holdInputValue(sides);
+              if (v != null) repsInput.value = String(v); // weaker side
+              const other = curSide === 'L' ? 'R' : 'L';
+              if (typeof sides[other] !== 'number') curSide = other;
+            } else {
+              repsInput.value = String(secs); // single hold: the stopped time
+            }
+            els.holdDisplay.textContent = fmtTime(0);
           } else {
             active.holdStart = Date.now();
-            toggleBtn.textContent = '⏹ Stop';
           }
+          active.holdSide = curSide;
           await saveActive(active);
+          refreshHoldWidget();
         },
-      }, active.holdStart ? '⏹ Stop' : '▶ Start hold');
-      holdWidget = h('div', { class: 'hold-timer' },
-        els.holdDisplay,
-        toggleBtn,
-        h('button', {
-          class: 'btn btn-ghost btn-step-sm', title: 'Reset hold timer',
-          onclick: async () => {
-            active.holdStart = null;
-            els.holdDisplay.textContent = fmtTime(0);
-            toggleBtn.textContent = '▶ Start hold';
-            await saveActive(active);
-          },
-        }, '↺'),
+      }, '');
+      const resetBtn = h('button', {
+        class: 'btn btn-ghost btn-step-sm', title: 'Reset hold timer',
+        onclick: async () => {
+          active.holdStart = null;
+          active.holdSides = { L: null, R: null };
+          active.holdSide = 'L';
+          curSide = 'L';
+          await saveActive(active);
+          els.holdDisplay.textContent = fmtTime(0);
+          refreshHoldWidget();
+        },
+      }, '↺');
+      els.holdSides = bilateral ? h('div', { class: 'hold-sides' }, '') : null;
+      refreshHoldWidget();
+      holdWidget = h('div', {},
+        h('div', { class: 'hold-timer' }, ...sideBtns, els.holdDisplay, toggleBtn, resetBtn),
+        els.holdSides,
       );
     }
 
@@ -242,7 +298,7 @@ async function runView(root, active) {
       }, `Set ${i + 1}: ${r}${isHold ? 's' : ''}`);
     });
 
-    els.panel.append(
+    appendAll(els.panel,
       h('div', { class: 'exercise-group-label' }, groupLabel(step.exerciseId)),
       h('h2', { class: 'exercise-name' }, ex.name),
       h('div', { class: 'progression-line' },
@@ -274,7 +330,7 @@ async function runView(root, active) {
 
     els.countdown = h('div', { class: 'countdown' }, fmtTime(remainingMs(rest) / 1000));
 
-    els.panel.append(
+    appendAll(els.panel,
       h('div', { class: 'rest-label' }, 'REST'),
       els.countdown,
       h('div', { class: 'next-preview' },
@@ -336,10 +392,14 @@ async function runView(root, active) {
     const entry = active.entries[step.exerciseId];
     entry.sets[step.setNumber - 1] = clamp(reps, 0, 600);
     active.holdStart = null;
+    active.holdSides = { L: null, R: null };
+    active.holdSide = 'L';
     const n = stepAfterSet(active.queue, active.index);
     if (n.phase === 'rest') {
       const restStep = active.queue[n.index];
-      const dur = restStep.kind === 'core' ? settings.restCore : settings.restPair;
+      const dur = restStep.kind === 'core' ? settings.restCore
+        : restStep.kind === 'triplet' ? settings.restTriplet
+        : settings.restPair;
       active.rest = startRest(dur);
     } else {
       active.rest = null;
@@ -460,6 +520,7 @@ async function runView(root, active) {
     const rec = {
       date: active.startedAt,
       durationSec: Math.max(1, Math.round((now - active.startedAt) / 1000)),
+      mode: active.mode || 'standard',
       exercises: active.entries,
     };
     await addWorkout(rec);

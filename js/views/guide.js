@@ -48,6 +48,11 @@ export async function guideView(root) {
     ),
 
     h('section', { class: 'section card guide-section' },
+      h('h2', { class: 'section-title' }, 'Short on time? Triplet mode'),
+      h('p', {}, 'The guide\'s only sanctioned time-saver: "Make triplets rather than pairs, like pull-ups, rest 50s, squats, rest 50s, dips, rest 50s, repeat (saves ~10 minutes, but not recommended)." The app\'s Triplet mode does exactly this: the six strength exercises become two triplets (pull-ups → squats → dips, then hinge → rows → push-ups) plus the core triplet, each cycled 3× with a 50s rest between sets. Each exercise still gets ~3 minutes between its own sets. It is marked "not recommended" because short rests can cost rep quality — if your reps drop set to set, rest longer (quality over time).'),
+    ),
+
+    h('section', { class: 'section card guide-section' },
       h('h2', { class: 'section-title' }, 'Schedule'),
       h('p', {}, 'Do this 3 times a week, with at least one rest day (or skill day) between workout days — e.g. Monday / Wednesday / Friday. It\'s a full-body workout; don\'t split it across days.'),
     ),

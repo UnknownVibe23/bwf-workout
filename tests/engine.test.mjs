@@ -3,7 +3,8 @@ import {
   buildQueue, stepAfterSet, stepAfterRest, skipExerciseIndex,
   startRest, remainingMs, isRestDone, pauseRest, resumeRest, addRestTime, resetRest,
   isReadyToProgress, suggestedReps, completedSetCount, TOTAL_SETS,
-  isHoldProgression, targetFor, nextWorkoutDay,
+  isHoldProgression, targetFor, nextWorkoutDay, exerciseGroups, estimateMinutes, MODE_TRIPLET,
+  isBilateralHold, holdInputValue,
 } from '../js/engine.js';
 import { EXERCISES, PAIRS, CORE } from '../js/data.js';
 
@@ -187,5 +188,44 @@ r2 = nextWorkoutDay(mondayNoon, mondayNoon + 1 * day + 3600000); // Tuesday
 assert.ok(r2.restToday && !r2.trainedToday, 'day after workout: still rest day');
 r2 = nextWorkoutDay(mondayNoon, mondayNoon + 2 * day + 3600000); // Wednesday
 assert.ok(!r2.restToday && !r2.trainedToday, 'two days later: training day again');
+
+// --- Triplet ("short") mode: guide's exact variant ---
+const groupsT = exerciseGroups(MODE_TRIPLET);
+assert.deepEqual(groupsT[0], ['pullups', 'squats', 'dips'], 'first triplet is pull-ups, squats, dips per the guide example');
+assert.deepEqual(groupsT[1], ['hinge', 'rows', 'pushups']);
+assert.deepEqual(groupsT[2], ['antiExtension', 'antiRotation', 'extension']);
+assert.deepEqual(exerciseGroups('standard').length, 4, 'standard = 3 pairs + core triplet');
+
+const qt = buildQueue(MODE_TRIPLET);
+assert.equal(qt.filter((s) => s.type === 'set').length, 27, 'triplet: 27 sets');
+assert.equal(qt.filter((s) => s.type === 'rest').length, 26, 'triplet: rest after every set except the last');
+assert.ok(qt.filter((s) => s.type === 'rest').every((s) => s.kind === 'triplet'), 'all triplet rests use the triplet rest setting');
+assert.equal(qt[qt.length - 1].type, 'set', 'no rest after final set');
+// first cycle order: P,S,D
+assert.deepEqual(qt.slice(0, 5).map((s) => s.type === 'set' ? s.exerciseId : 'rest'), ['pullups', 'rest', 'squats', 'rest', 'dips']);
+// walk the triplet queue like the flow test: ends in done after last set
+const lastSet = qt.length - 1;
+assert.equal(stepAfterSet(qt, lastSet).phase, 'done');
+
+// estimates: defaults -> standard ~53 min, triplet ~40 min, triplet always shorter
+const estS = estimateMinutes('standard');
+const estT = estimateMinutes(MODE_TRIPLET);
+assert.equal(estS, Math.round((2100 + 27 * 40) / 60), `standard estimate ${estS}`);
+assert.equal(estT, Math.round((26 * 50 + 27 * 40) / 60), `triplet estimate ${estT}`);
+assert.ok(estT < estS);
+
+// --- Bilateral holds (Copenhagen planks): per-side timing, weaker side logged ---
+assert.ok(isBilateralHold('Copenhagen plank'));
+assert.ok(isBilateralHold('Assisted knee Copenhagen plank'));
+assert.ok(isBilateralHold('Copenhagen plank with movement'));
+assert.ok(!isBilateralHold('Plank'), 'plain plank is not bilateral');
+assert.ok(!isBilateralHold('Arch hangs'));
+assert.ok(!isBilateralHold('Parallel bar support hold'));
+assert.ok(!isBilateralHold('Arch body hold'));
+assert.ok(!isBilateralHold('Ring ab rollouts'), 'reps exercise is not a hold at all');
+assert.equal(holdInputValue({ L: 40, R: 20 }), 20, 'weaker side wins');
+assert.equal(holdInputValue({ L: 25, R: 25 }), 25);
+assert.equal(holdInputValue({ L: 30, R: null }), 30, 'single side recorded so far');
+assert.equal(holdInputValue({ L: null, R: null }), null);
 
 console.log('All engine tests passed.');
