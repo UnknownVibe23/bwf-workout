@@ -173,4 +173,22 @@ for (const mode of [MODE_STANDARD, MODE_TRIPLET]) {
   }
 }
 
+// ---------- 10. Regression: +15s then Pause must keep the added time ----------
+// (view bug: pause button used a stale captured rest object)
+{
+  let r = startRest(90, now);
+  r = addRestTime(r, 15, now);           // user pressed +15s
+  assert.equal(remainingMs(r, now), 105000);
+  r = pauseRest(r, now + 10000);          // paused 10s later
+  assert.equal(r.pausedRemaining, 95, 'paused remaining = 105 - 10, +15s preserved');
+  r = resumeRest(r, now + 20000);
+  assert.equal(remainingMs(r, now + 20000), 95000);
+  r = addRestTime(r, 15, now + 20000);    // +15s while running extends endsAt
+  assert.equal(remainingMs(r, now + 20000), 110000);
+  const p2 = pauseRest(r, now + 20000);   // +15s while paused adds to pausedRemaining
+  const p3 = addRestTime(pauseRest(startRest(90, now), now), 15, now);
+  assert.equal(p3.pausedRemaining, 105);
+  assert.equal(p2.pausedRemaining, 110);
+}
+
 console.log('All adversarial tests passed.');
