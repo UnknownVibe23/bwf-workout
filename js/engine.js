@@ -1,4 +1,4 @@
-import { PAIRS, CORE, SETS_PER_EXERCISE, restKindFor } from './data.js';
+import { PAIRS, CORE, SETS_PER_EXERCISE, restKindFor, EXERCISE_ORDER } from './data.js';
 
 export const TOTAL_SETS = 9 * SETS_PER_EXERCISE;
 
@@ -119,13 +119,13 @@ export function resetRest(rest, now = Date.now()) {
 }
 
 export function isReadyToProgress(sets, repRange) {
-  const nums = (sets || []).filter((r) => typeof r === 'number');
+  const nums = (sets || []).filter((r) => Number.isFinite(r));
   return (sets || []).length === SETS_PER_EXERCISE && nums.length === SETS_PER_EXERCISE && nums.every((r) => r >= repRange[1]);
 }
 
 export function suggestedReps(lastSets, repRange) {
   const [low, high] = repRange;
-  const nums = (lastSets || []).filter((r) => typeof r === 'number');
+  const nums = (lastSets || []).filter((r) => Number.isFinite(r));
   if (!nums.length) return low;
   const min = Math.min(...nums);
   if (min >= high) return high;
@@ -147,7 +147,7 @@ export function isBilateralHold(progressionName) {
 }
 
 export function holdInputValue(sides) {
-  const vals = [sides && sides.L, sides && sides.R].filter((v) => typeof v === 'number');
+  const vals = [sides && sides.L, sides && sides.R].filter((v) => Number.isFinite(v));
   if (!vals.length) return null;
   return Math.min(...vals);
 }
@@ -179,7 +179,54 @@ export function nextWorkoutDay(lastTs, now = Date.now()) {
 export function completedSetCount(entries) {
   let n = 0;
   for (const id of Object.keys(entries || {})) {
-    for (const r of entries[id].sets) if (typeof r === 'number') n++;
+    for (const r of (entries[id] && entries[id].sets) || []) if (Number.isFinite(r)) n++;
   }
   return n;
+}
+
+// Harden a persisted active session against partial/corrupt writes
+// (e.g. browser killed mid-save): fill defaults, clamp indices, rebuild
+// the queue if it does not match the mode, sanitize entries and rest.
+export function normalizeActive(raw) {
+  const a = raw && typeof raw === 'object' ? raw : {};
+  const mode = a.mode === MODE_TRIPLET ? MODE_TRIPLET : MODE_STANDARD;
+  const expected = buildQueue(mode);
+  const queue = Array.isArray(a.queue) && a.queue.length === expected.length ? a.queue : expected;
+  const index = Number.isInteger(a.index) ? Math.min(Math.max(a.index, 0), queue.length - 1) : 0;
+  let rest = null;
+  if (a.phase === 'rest' && a.rest && typeof a.rest === 'object') {
+    const r = a.rest;
+    if (typeof r.endsAt === 'number' || typeof r.pausedRemaining === 'number') {
+      rest = {
+        endsAt: typeof r.endsAt === 'number' ? r.endsAt : null,
+        durationSec: typeof r.durationSec === 'number' && r.durationSec > 0 ? r.durationSec : 90,
+        pausedRemaining: typeof r.pausedRemaining === 'number' ? r.pausedRemaining : null,
+      };
+    }
+  }
+  const entries = {};
+  for (const id of EXERCISE_ORDER) {
+    const e = a.entries && a.entries[id];
+    const sets = Array.isArray(e && e.sets) ? e.sets.slice(0, SETS_PER_EXERCISE) : [];
+    while (sets.length < SETS_PER_EXERCISE) sets.push(null);
+    entries[id] = {
+      level: Number.isInteger(e && e.level) ? e.level : 0,
+      path: Number.isInteger(e && e.path) ? e.path : 0,
+      progression: typeof (e && e.progression) === 'string' ? e.progression : '',
+      sets,
+    };
+  }
+  return {
+    startedAt: typeof a.startedAt === 'number' ? a.startedAt : Date.now(),
+    mode,
+    queue,
+    index,
+    phase: rest ? 'rest' : (a.phase === 'done' ? 'done' : 'exercise'),
+    rest,
+    paused: a.paused === true,
+    entries,
+    holdStart: typeof a.holdStart === 'number' ? a.holdStart : null,
+    holdSides: a.holdSides && typeof a.holdSides === 'object' ? a.holdSides : { L: null, R: null },
+    holdSide: a.holdSide === 'R' ? 'R' : 'L',
+  };
 }

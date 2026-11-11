@@ -4,7 +4,7 @@ import {
   buildQueue, estimateMinutes, stepAfterSet, stepAfterRest, skipExerciseIndex,
   startRest, remainingMs, isRestDone, pauseRest, resumeRest, addRestTime, resetRest,
   suggestedReps, isReadyToProgress, completedSetCount, TOTAL_SETS, targetFor,
-  isBilateralHold, holdInputValue,
+  isBilateralHold, holdInputValue, normalizeActive,
 } from '../engine.js';
 import {
   getActive, saveActive, clearActive, getAllProgressions, progressionName,
@@ -17,11 +17,9 @@ import { session } from '../session.js';
 let activeCleanup = null;
 
 export async function workoutView(root) {
-  const active = await getActive();
-  if (!active || !Array.isArray(active.queue) || !active.queue.length) {
-    return setupView(root);
-  }
-  return runView(root, active);
+  const raw = await getActive();
+  if (!raw) return setupView(root);
+  return runView(root, normalizeActive(raw));
 }
 
 function groupLabel(exerciseId) {

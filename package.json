@@ -6,7 +6,7 @@
   "description": "PWA workout companion for the Reddit Bodyweight Fitness Recommended Routine. No dependencies, no build step.",
   "scripts": {
     "start": "python3 -m http.server 8000",
-    "test": "node tests/engine.test.mjs && node tests/flow.test.mjs && node tests/version.test.mjs && node tests/util.test.mjs",
+    "test": "node tests/engine.test.mjs && node tests/flow.test.mjs && node tests/version.test.mjs && node tests/util.test.mjs && node tests/adversarial.test.mjs",
     "icons": "python3 tools/make_icons.py"
   }
 }
