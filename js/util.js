@@ -15,6 +15,15 @@ export function h(tag, attrs = {}, ...children) {
   return el;
 }
 
+// Native Element.append() renders null/undefined as the text "null" —
+// use this for variadic children that may contain null placeholders.
+export function appendAll(el, ...children) {
+  for (const c of children.flat(Infinity)) {
+    if (c == null || c === false) continue;
+    el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+}
+
 export function fmtTime(totalSec) {
   const s = Math.max(0, Math.ceil(totalSec));
   const m = Math.floor(s / 60);

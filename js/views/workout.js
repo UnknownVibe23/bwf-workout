@@ -1,4 +1,4 @@
-import { h, fmtTime, fmtDuration, clamp, confirmModal } from '../util.js';
+import { h, appendAll, fmtTime, fmtDuration, clamp, confirmModal } from '../util.js';
 import { EXERCISES, EXERCISE_ORDER, PAIRS, CORE, SETS_PER_EXERCISE } from '../data.js';
 import {
   buildQueue, estimateMinutes, stepAfterSet, stepAfterRest, skipExerciseIndex,
@@ -266,7 +266,7 @@ async function runView(root, active) {
       }, `Set ${i + 1}: ${r}${isHold ? 's' : ''}`);
     });
 
-    els.panel.append(
+    appendAll(els.panel,
       h('div', { class: 'exercise-group-label' }, groupLabel(step.exerciseId)),
       h('h2', { class: 'exercise-name' }, ex.name),
       h('div', { class: 'progression-line' },
@@ -298,7 +298,7 @@ async function runView(root, active) {
 
     els.countdown = h('div', { class: 'countdown' }, fmtTime(remainingMs(rest) / 1000));
 
-    els.panel.append(
+    appendAll(els.panel,
       h('div', { class: 'rest-label' }, 'REST'),
       els.countdown,
       h('div', { class: 'next-preview' },
