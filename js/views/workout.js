@@ -339,11 +339,15 @@ async function runView(root, active) {
         h('button', {
           class: 'btn btn-secondary',
           onclick: async () => {
-            active.rest = rest.pausedRemaining == null ? pauseRest(rest) : resumeRest(rest);
+            // Always operate on the CURRENT active.rest — a captured `rest`
+            // would be stale after +15s/Reset and silently drop those changes.
+            const cur = active.rest;
+            if (!cur) return;
+            active.rest = cur.pausedRemaining == null ? pauseRest(cur) : resumeRest(cur);
             await saveActive(active);
             renderPanel();
           },
-        }, rest.pausedRemaining == null ? '⏸ Pause' : '▶ Resume'),
+        }, (active.rest && active.rest.pausedRemaining != null) ? '▶ Resume' : '⏸ Pause'),
         h('button', { class: 'btn btn-secondary', onclick: add15 }, '+15s'),
         h('button', { class: 'btn btn-secondary', onclick: skipRest }, '⏭ Skip rest'),
         h('button', { class: 'btn btn-secondary', onclick: resetTimer }, '↺ Reset'),
