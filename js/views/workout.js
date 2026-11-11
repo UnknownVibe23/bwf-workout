@@ -213,10 +213,25 @@ async function runView(root, active) {
       const bilateral = isBilateralHold(entry.progression);
       if (!active.holdSides) active.holdSides = { L: null, R: null };
       const sides = active.holdSides;
-      const curSide = active.holdSide || 'L';
+      let curSide = active.holdSide || 'L';
       const sideTxt = (s) => `${s}: ${typeof sides[s] === 'number' ? fmtTime(sides[s]) : '–'}`;
       els.holdDisplay = h('span', { class: 'hold-display' },
         fmtTime(active.holdStart ? (Date.now() - active.holdStart) / 1000 : 0));
+      // NOTE: update the widget in place — do NOT call renderPanel() here,
+      // it would rebuild the reps input and wipe the just-measured time.
+      function refreshHoldWidget() {
+        if (els.holdSides) {
+          const logged = bilateral ? holdInputValue(sides) : null;
+          els.holdSides.textContent = `${sideTxt('L')} · ${sideTxt('R')}` +
+            (typeof logged === 'number' ? ` → logged ${fmtTime(logged)} (weaker side)` : '');
+        }
+        for (const b of sideBtns) b.classList.toggle('side-active', b.dataset.side === curSide);
+        toggleBtn.textContent = active.holdStart ? '⏹ Stop' : `▶ Start hold${bilateral ? ` (${curSide})` : ''}`;
+      }
+      const sideBtns = bilateral ? ['L', 'R'].map((s) => h('button', {
+        class: 'btn btn-ghost btn-step-sm side-btn', 'data-side': s,
+        onclick: async () => { curSide = s; active.holdSide = s; await saveActive(active); refreshHoldWidget(); },
+      }, s)) : [];
       const toggleBtn = h('button', {
         class: 'btn btn-secondary',
         onclick: async () => {
@@ -226,42 +241,38 @@ async function runView(root, active) {
             if (bilateral) {
               sides[curSide] = secs;
               const v = holdInputValue(sides);
-              if (v != null) repsInput.value = String(v);
+              if (v != null) repsInput.value = String(v); // weaker side
               const other = curSide === 'L' ? 'R' : 'L';
-              if (typeof sides[other] !== 'number') active.holdSide = other;
+              if (typeof sides[other] !== 'number') curSide = other;
             } else {
-              repsInput.value = String(secs);
+              repsInput.value = String(secs); // single hold: the stopped time
             }
+            els.holdDisplay.textContent = fmtTime(0);
           } else {
             active.holdStart = Date.now();
           }
+          active.holdSide = curSide;
           await saveActive(active);
-          renderPanel();
+          refreshHoldWidget();
         },
-      }, active.holdStart ? '⏹ Stop' : `▶ Start hold${bilateral ? ` (${curSide})` : ''}`);
+      }, '');
       const resetBtn = h('button', {
         class: 'btn btn-ghost btn-step-sm', title: 'Reset hold timer',
         onclick: async () => {
           active.holdStart = null;
           active.holdSides = { L: null, R: null };
           active.holdSide = 'L';
+          curSide = 'L';
           await saveActive(active);
-          renderPanel();
+          els.holdDisplay.textContent = fmtTime(0);
+          refreshHoldWidget();
         },
       }, '↺');
-      const sideBtns = bilateral ? ['L', 'R'].map((s) => h('button', {
-        class: `btn btn-ghost btn-step-sm side-btn${curSide === s ? ' side-active' : ''}`,
-        onclick: async () => { active.holdSide = s; await saveActive(active); renderPanel(); },
-      }, s)) : [];
-      const logged = bilateral ? holdInputValue(sides) : null;
-      const sidesInfo = bilateral
-        ? h('div', { class: 'hold-sides' },
-            `${sideTxt('L')} · ${sideTxt('R')}`,
-            typeof logged === 'number' ? ` → logged ${fmtTime(logged)} (weaker side)` : '')
-        : null;
+      els.holdSides = bilateral ? h('div', { class: 'hold-sides' }, '') : null;
+      refreshHoldWidget();
       holdWidget = h('div', {},
         h('div', { class: 'hold-timer' }, ...sideBtns, els.holdDisplay, toggleBtn, resetBtn),
-        sidesInfo,
+        els.holdSides,
       );
     }
 
