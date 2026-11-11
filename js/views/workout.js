@@ -4,6 +4,7 @@ import {
   buildQueue, estimateMinutes, stepAfterSet, stepAfterRest, skipExerciseIndex,
   startRest, remainingMs, isRestDone, pauseRest, resumeRest, addRestTime, resetRest,
   suggestedReps, isReadyToProgress, completedSetCount, TOTAL_SETS, targetFor,
+  isBilateralHold, holdInputValue,
 } from '../engine.js';
 import {
   getActive, saveActive, clearActive, getAllProgressions, progressionName,
@@ -209,6 +210,11 @@ async function runView(root, active) {
 
     let holdWidget = null;
     if (isHold) {
+      const bilateral = isBilateralHold(entry.progression);
+      if (!active.holdSides) active.holdSides = { L: null, R: null };
+      const sides = active.holdSides;
+      const curSide = active.holdSide || 'L';
+      const sideTxt = (s) => `${s}: ${typeof sides[s] === 'number' ? fmtTime(sides[s]) : '–'}`;
       els.holdDisplay = h('span', { class: 'hold-display' },
         fmtTime(active.holdStart ? (Date.now() - active.holdStart) / 1000 : 0));
       const toggleBtn = h('button', {
@@ -217,28 +223,45 @@ async function runView(root, active) {
           if (active.holdStart) {
             const secs = Math.round((Date.now() - active.holdStart) / 1000);
             active.holdStart = null;
-            repsInput.value = String(secs);
-            els.holdDisplay.textContent = fmtTime(secs);
-            toggleBtn.textContent = '▶ Start hold';
+            if (bilateral) {
+              sides[curSide] = secs;
+              const v = holdInputValue(sides);
+              if (v != null) repsInput.value = String(v);
+              const other = curSide === 'L' ? 'R' : 'L';
+              if (typeof sides[other] !== 'number') active.holdSide = other;
+            } else {
+              repsInput.value = String(secs);
+            }
           } else {
             active.holdStart = Date.now();
-            toggleBtn.textContent = '⏹ Stop';
           }
           await saveActive(active);
+          renderPanel();
         },
-      }, active.holdStart ? '⏹ Stop' : '▶ Start hold');
-      holdWidget = h('div', { class: 'hold-timer' },
-        els.holdDisplay,
-        toggleBtn,
-        h('button', {
-          class: 'btn btn-ghost btn-step-sm', title: 'Reset hold timer',
-          onclick: async () => {
-            active.holdStart = null;
-            els.holdDisplay.textContent = fmtTime(0);
-            toggleBtn.textContent = '▶ Start hold';
-            await saveActive(active);
-          },
-        }, '↺'),
+      }, active.holdStart ? '⏹ Stop' : `▶ Start hold${bilateral ? ` (${curSide})` : ''}`);
+      const resetBtn = h('button', {
+        class: 'btn btn-ghost btn-step-sm', title: 'Reset hold timer',
+        onclick: async () => {
+          active.holdStart = null;
+          active.holdSides = { L: null, R: null };
+          active.holdSide = 'L';
+          await saveActive(active);
+          renderPanel();
+        },
+      }, '↺');
+      const sideBtns = bilateral ? ['L', 'R'].map((s) => h('button', {
+        class: `btn btn-ghost btn-step-sm side-btn${curSide === s ? ' side-active' : ''}`,
+        onclick: async () => { active.holdSide = s; await saveActive(active); renderPanel(); },
+      }, s)) : [];
+      const logged = bilateral ? holdInputValue(sides) : null;
+      const sidesInfo = bilateral
+        ? h('div', { class: 'hold-sides' },
+            `${sideTxt('L')} · ${sideTxt('R')}`,
+            typeof logged === 'number' ? ` → logged ${fmtTime(logged)} (weaker side)` : '')
+        : null;
+      holdWidget = h('div', {},
+        h('div', { class: 'hold-timer' }, ...sideBtns, els.holdDisplay, toggleBtn, resetBtn),
+        sidesInfo,
       );
     }
 
@@ -360,6 +383,8 @@ async function runView(root, active) {
     const entry = active.entries[step.exerciseId];
     entry.sets[step.setNumber - 1] = clamp(reps, 0, 600);
     active.holdStart = null;
+    active.holdSides = { L: null, R: null };
+    active.holdSide = 'L';
     const n = stepAfterSet(active.queue, active.index);
     if (n.phase === 'rest') {
       const restStep = active.queue[n.index];

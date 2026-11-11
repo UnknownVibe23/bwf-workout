@@ -139,6 +139,19 @@ export function isHoldProgression(progressionName) {
   return /hold|plank|arch hang/i.test(String(progressionName));
 }
 
+// Bilateral holds (done per side, e.g. Copenhagen planks) are timed for
+// left and right side; the logged value is the WEAKER side (min), so the
+// 3x30s progression rule only triggers when both sides can hold it.
+export function isBilateralHold(progressionName) {
+  return isHoldProgression(progressionName) && /copenhagen/i.test(String(progressionName));
+}
+
+export function holdInputValue(sides) {
+  const vals = [sides && sides.L, sides && sides.R].filter((v) => typeof v === 'number');
+  if (!vals.length) return null;
+  return Math.min(...vals);
+}
+
 export function targetFor(exercise, progressionName) {
   if (isHoldProgression(progressionName)) {
     // Main RR page: holds progress at 3x30s. The dipping page specifies

@@ -4,6 +4,7 @@ import {
   startRest, remainingMs, isRestDone, pauseRest, resumeRest, addRestTime, resetRest,
   isReadyToProgress, suggestedReps, completedSetCount, TOTAL_SETS,
   isHoldProgression, targetFor, nextWorkoutDay, exerciseGroups, estimateMinutes, MODE_TRIPLET,
+  isBilateralHold, holdInputValue,
 } from '../js/engine.js';
 import { EXERCISES, PAIRS, CORE } from '../js/data.js';
 
@@ -212,5 +213,19 @@ const estT = estimateMinutes(MODE_TRIPLET);
 assert.equal(estS, Math.round((2100 + 27 * 40) / 60), `standard estimate ${estS}`);
 assert.equal(estT, Math.round((26 * 50 + 27 * 40) / 60), `triplet estimate ${estT}`);
 assert.ok(estT < estS);
+
+// --- Bilateral holds (Copenhagen planks): per-side timing, weaker side logged ---
+assert.ok(isBilateralHold('Copenhagen plank'));
+assert.ok(isBilateralHold('Assisted knee Copenhagen plank'));
+assert.ok(isBilateralHold('Copenhagen plank with movement'));
+assert.ok(!isBilateralHold('Plank'), 'plain plank is not bilateral');
+assert.ok(!isBilateralHold('Arch hangs'));
+assert.ok(!isBilateralHold('Parallel bar support hold'));
+assert.ok(!isBilateralHold('Arch body hold'));
+assert.ok(!isBilateralHold('Ring ab rollouts'), 'reps exercise is not a hold at all');
+assert.equal(holdInputValue({ L: 40, R: 20 }), 20, 'weaker side wins');
+assert.equal(holdInputValue({ L: 25, R: 25 }), 25);
+assert.equal(holdInputValue({ L: 30, R: null }), 30, 'single side recorded so far');
+assert.equal(holdInputValue({ L: null, R: null }), null);
 
 console.log('All engine tests passed.');
